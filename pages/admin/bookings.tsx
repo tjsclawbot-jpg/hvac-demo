@@ -3,6 +3,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { SAMPLE_BOOKINGS } from '@/lib/bookingData'
+import { SAMPLE_VOICE_BOOKINGS, VoiceBooking, VOICE_SERVICE_TYPES } from '@/lib/voiceBookingData'
 import { getStatusColor, formatDate, formatCurrency, getHoursUntilAppointment } from '@/lib/bookingManagement'
 
 interface Booking {
@@ -21,18 +22,41 @@ interface Booking {
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>(SAMPLE_BOOKINGS)
+  const [voiceBookings, setVoiceBookings] = useState<VoiceBooking[]>(SAMPLE_VOICE_BOOKINGS)
   const [viewType, setViewType] = useState<'list' | 'calendar'>('list')
+  const [bookingType, setBookingType] = useState<'web' | 'voice'>('web')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [selectedVoiceBooking, setSelectedVoiceBooking] = useState<VoiceBooking | null>(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [refundAmount, setRefundAmount] = useState(145) // Default: $150 - $5 fee
 
+  // Filter bookings based on type and status
   const filteredBookings = filterStatus === 'all' 
     ? bookings 
     : bookings.filter(b => b.status === filterStatus)
 
+  // Filter and sort voice bookings
+  let filteredVoiceBookings = filterStatus === 'all' 
+    ? voiceBookings 
+    : voiceBookings.filter(b => b.status === filterStatus)
+  
+  // Sort voice bookings by date
+  filteredVoiceBookings = [...filteredVoiceBookings].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.preferredTime}`)
+    const dateB = new Date(`${b.date}T${b.preferredTime}`)
+    return sortOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
+  })
+
   const handleStatusChange = (bookingId: string, newStatus: string) => {
     setBookings(bookings.map(b => 
+      b.id === bookingId ? { ...b, status: newStatus as any } : b
+    ))
+  }
+
+  const handleVoiceBookingStatusChange = (bookingId: string, newStatus: string) => {
+    setVoiceBookings(voiceBookings.map(b => 
       b.id === bookingId ? { ...b, status: newStatus as any } : b
     ))
   }
@@ -47,7 +71,12 @@ export default function AdminBookings() {
     setSelectedBooking(null)
   }
 
-  const upcomingCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length
+  // Calculate stats for both booking types
+  const webUpcomingCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length
+  const voiceUpcomingCount = voiceBookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length
+  const upcomingCount = webUpcomingCount + voiceUpcomingCount
+  
+  const totalBookings = bookings.length + voiceBookings.length
   const totalDeposits = bookings.filter(b => b.depositPaid).length * 150
 
   return (
@@ -59,72 +88,124 @@ export default function AdminBookings() {
           {/* Page Header */}
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-hvac-darkgray mb-1 sm:mb-2">Booking Management</h1>
-            <p className="text-xs sm:text-sm text-gray-600">View and manage customer inspection bookings</p>
+            <p className="text-xs sm:text-sm text-gray-600">View and manage customer web and voice bookings</p>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8">
             <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Total Bookings</p>
-              <p className="text-2xl sm:text-3xl font-bold text-hvac-darkgray">{bookings.length}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-hvac-darkgray">{totalBookings}</p>
+              <p className="text-xs text-gray-500 mt-1">{bookings.length} web, {voiceBookings.length} voice</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Upcoming</p>
               <p className="text-2xl sm:text-3xl font-bold text-hvac-orange">{upcomingCount}</p>
+              <p className="text-xs text-gray-500 mt-1">{webUpcomingCount} web, {voiceUpcomingCount} voice</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Total Deposits</p>
               <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(totalDeposits)}</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
-              <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Confirmed</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Web Confirmed</p>
               <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                 {bookings.filter(b => b.status === 'confirmed').length}
+              </p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Voice Confirmed</p>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-600">
+                {voiceBookings.filter(b => b.status === 'confirmed').length}
               </p>
             </div>
           </div>
 
           {/* Controls */}
-          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 mb-6 flex flex-col gap-3 md:flex-row md:justify-between md:items-center md:gap-4">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewType('list')}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
-                  viewType === 'list'
-                    ? 'bg-hvac-orange text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                📋 List View
-              </button>
-              <button
-                onClick={() => setViewType('calendar')}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
-                  viewType === 'calendar'
-                    ? 'bg-hvac-orange text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                📅 Calendar View
-              </button>
+          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 mb-6 flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-4">
+              {/* Booking Type Selector */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBookingType('web')}
+                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
+                    bookingType === 'web'
+                      ? 'bg-hvac-orange text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  🌐 Web Bookings
+                </button>
+                <button
+                  onClick={() => setBookingType('voice')}
+                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
+                    bookingType === 'voice'
+                      ? 'bg-hvac-orange text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  🎤 Voice Bookings
+                </button>
+              </div>
+
+              {/* View Type Selector (only for web bookings) */}
+              {bookingType === 'web' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewType('list')}
+                    className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
+                      viewType === 'list'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    📋 List
+                  </button>
+                  <button
+                    onClick={() => setViewType('calendar')}
+                    className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all min-h-10 ${
+                      viewType === 'calendar'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    📅 Calendar
+                  </button>
+                </div>
+              )}
             </div>
 
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hvac-orange min-h-10"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="no-show">No-Show</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hvac-orange min-h-10"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="no-show">No-Show</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+
+              {/* Sort Order (for voice bookings) */}
+              {bookingType === 'voice' && (
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hvac-orange min-h-10"
+                >
+                  <option value="newest">📅 Newest First</option>
+                  <option value="oldest">📅 Oldest First</option>
+                </select>
+              )}
+            </div>
           </div>
 
-          {/* List View */}
-          {viewType === 'list' && (
+          {/* Web Bookings List View */}
+          {bookingType === 'web' && viewType === 'list' && (
             <div className="space-y-3 sm:space-y-4">
               {filteredBookings.map(booking => (
                 <div
@@ -205,8 +286,80 @@ export default function AdminBookings() {
             </div>
           )}
 
-          {/* Calendar View */}
-          {viewType === 'calendar' && (
+          {/* Voice Bookings List View */}
+          {bookingType === 'voice' && (
+            <div className="space-y-3 sm:space-y-4">
+              {filteredVoiceBookings.length > 0 ? (
+                filteredVoiceBookings.map(booking => (
+                  <div
+                    key={booking.id}
+                    className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6 hover:shadow-md transition-shadow"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-2 sm:gap-4 mb-3 sm:mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Date</p>
+                        <p className="font-semibold text-xs sm:text-sm text-hvac-darkgray">
+                          {formatDate(booking.date)}
+                        </p>
+                        <p className="text-xs text-gray-600">{booking.preferredTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Service Type</p>
+                        <p className="font-semibold text-xs sm:text-sm text-hvac-darkgray capitalize">
+                          {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Customer Name</p>
+                        <p className="font-semibold text-xs sm:text-sm text-hvac-darkgray">{booking.customerName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Phone</p>
+                        <p className="font-semibold text-xs sm:text-sm text-hvac-darkgray">{booking.customerPhone}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Address</p>
+                        <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">{booking.serviceAddress}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Status</p>
+                        <span className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(booking.status)}`}>
+                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-2 sm:pt-4 flex flex-wrap gap-2">
+                      <select
+                        value={booking.status}
+                        onChange={(e) => handleVoiceBookingStatusChange(booking.id, e.target.value)}
+                        className="px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hvac-orange min-h-9 sm:min-h-10"
+                      >
+                        <option value="pending">Mark as Pending</option>
+                        <option value="confirmed">Mark as Confirmed</option>
+                        <option value="completed">Mark as Completed</option>
+                        <option value="no-show">Mark as No-Show</option>
+                        <option value="cancelled">Mark as Cancelled</option>
+                      </select>
+
+                      <button
+                        className="px-2 sm:px-3 py-2 text-xs sm:text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-all ml-auto min-h-9 sm:min-h-10"
+                      >
+                        📞 Call Details
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">No voice bookings found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Web Bookings Calendar View */}
+          {bookingType === 'web' && viewType === 'calendar' && (
             <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
               <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
