@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import twilio from 'twilio'
+import { updateCallState } from '../../../lib/supabase'
 
 const authToken = process.env.TWILIO_AUTH_TOKEN
 
@@ -20,6 +21,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const callSid = req.body.CallSid
 
     console.log(`🏠 Customer address: ${address}`)
+
+    // Validate and save address to call state
+    if (!address || address.trim().length === 0) {
+      console.warn('⚠️ Empty address provided')
+    } else {
+      const updateResult = await updateCallState(callSid, {
+        service_address: address.trim(),
+        status: 'address_collected',
+      })
+      
+      if (!updateResult.success) {
+        console.warn(`⚠️ Failed to save address: ${updateResult.error}`)
+      } else {
+        console.log(`✅ Address saved to call state`)
+      }
+    }
 
     // Create TwiML response - ask for appointment timing
     const twiml = new twilio.twiml.VoiceResponse()

@@ -1,18 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import twilio from 'twilio'
-import { storeVoiceBooking, VoiceBooking as SupabaseVoiceBooking } from '../../../lib/supabase'
+import { getCallState, storeVoiceBooking, updateCallState } from '../../../lib/supabase'
 
 const authToken = process.env.TWILIO_AUTH_TOKEN
-
-interface VoiceBooking {
-  customerName: string
-  customerPhone: string
-  serviceAddress: string
-  serviceType: string
-  preferredTime: string
-  callSid: string
-  timestamp: string
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // const twilioSignature = req.headers['x-twilio-signature'] as string
@@ -32,33 +22,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`⏰ Preferred time: ${preferredTime}`)
 
-    // TODO: Extract data from conversation state (for now using mocked data)
-    // In production, we'd store conversation state in Redis or database
+    // Retrieve all data from call state
+    const stateResult = await getCallState(callSid)
     
-    const voiceBooking: VoiceBooking = {
-      customerName: 'John Smith', // TODO: Extract from conversation
-      customerPhone: '555-1234567', // TODO: Extract from conversation
-      serviceAddress: '123 Main St, Washington DC', // TODO: Extract from conversation
-      serviceType: 'AC repair', // TODO: Extract from conversation
-      preferredTime: preferredTime,
-      callSid: callSid,
-      timestamp: new Date().toISOString(),
+    if (!stateResult.success || !stateResult.data) {
+      console.error(`❌ Failed to retrieve call state for ${callSid}`)
+      // Continue with graceful fallback
     }
 
-    console.log('📋 Voice Booking Created:', voiceBooking)
+    const callState = stateResult.data || {}
 
-    // Store booking in Supabase (graceful failure - continues even if DB fails)
-    const dbResult = await storeVoiceBooking({
-      call_sid: voiceBooking.callSid,
-      service_type: voiceBooking.serviceType,
-      customer_name: voiceBooking.customerName,
-      customer_phone: voiceBooking.customerPhone,
-      service_address: voiceBooking.serviceAddress,
-      preferred_time: voiceBooking.preferredTime,
+    // Validate and compile booking data
+    const customerName = callState.customer_name || 'Unknown'
+    const customerPhone = callState.customer_phone || 'Unknown'
+    const serviceAddress = callState.service_address || 'Unknown'
+    const serviceType = callState.service_type || 'Unknown'
+
+    console.log('📋 Voice Booking Data:', {
+      customerName,
+      customerPhone,
+      serviceAddress,
+      serviceType,
+      preferredTime,
+      callSid,
     })
 
-    if (!dbResult.success) {
-      console.warn('⚠️ Failed to store booking in Supabase, but continuing with confirmation:', dbResult.error)
+    // Update call state with preferred time
+    const timeUpdateResult = await updateCallState(callSid, {
+      preferred_time: preferredTime,
+      status: 'time_collected',
+    })
+    
+    if (!timeUpdateResult.success) {
+      console.warn(`⚠️ Failed to save preferred time: ${timeUpdateResult.error}`)
+    }
+
+    // Store complete booking in voice_bookings table
+    const bookingResult = await storeVoiceBooking({
+      call_sid: callSid,
+      service_type: serviceType,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      service_address: serviceAddress,
+      preferred_time: preferredTime,
+    })
+
+    if (!bookingResult.success) {
+      console.warn('⚠️ Failed to store booking in Supabase, but continuing with confirmation:', bookingResult.error)
+    } else {
+      console.log('✅ Booking stored in voice_bookings table')
+    }
+
+    // Mark call state as completed
+    const completeResult = await updateCallState(callSid, {
+      status: 'completed',
+    })
+    
+    if (!completeResult.success) {
+      console.warn(`⚠️ Failed to mark call state as completed: ${completeResult.error}`)
     }
 
     // Create TwiML response - confirmation
@@ -68,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       voice: 'alice',
       rate: '1.2',
       pitch: '1.3',
-    }, `Perfect! I've booked your ${voiceBooking.serviceType} appointment for ${voiceBooking.preferredTime}. You'll receive a confirmation text at ${voiceBooking.customerPhone}. Let me know if there is anything else I can help you with today, otherwise you'll get an appointment notification shortly`)
+    }, `Perfect! I've booked your ${serviceType} appointment for ${preferredTime}. You'll receive a confirmation text at ${customerPhone}. Let me know if there is anything else I can help you with today, otherwise you'll get an appointment notification shortly`)
 
     const gather = twiml.gather({
       input: ['speech'] as any,

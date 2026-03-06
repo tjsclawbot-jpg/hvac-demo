@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { initializeCallState } from '../../../lib/supabase'
 
 const twilio = require('twilio')
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const timestamp = new Date().toISOString()
   console.log(`\n🔥 [${timestamp}] ===== INCOMING CALL =====`)
   console.log(`Method: ${req.method}`)
@@ -13,6 +14,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   })
   console.log(`Body:`, req.body)
   
+  const callSid = req.body?.CallSid || 'unknown'
+  console.log(`📞 Call SID: ${callSid}`)
+
   // Handle GET requests (Twilio validation or testing)
   if (req.method === 'GET') {
     console.log(`[${timestamp}] GET request detected - returning test TwiML`)
@@ -32,6 +36,15 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   
   try {
+    // Initialize call state in database
+    console.log(`[${timestamp}] Initializing call state for ${callSid}`)
+    const stateResult = await initializeCallState(callSid)
+    if (!stateResult.success) {
+      console.warn(`⚠️ Failed to initialize call state: ${stateResult.error}`)
+    } else {
+      console.log(`✅ Call state initialized`)
+    }
+
     console.log(`[${timestamp}] Creating VoiceResponse object`)
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()

@@ -1,12 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { updateCallState } from '../../../lib/supabase'
 
 const twilio = require('twilio')
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log(`[${new Date().toISOString()}] Speech input received`)
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] Speech input received`)
+  
+  const callSid = req.body.CallSid
+  const speechResult = req.body.SpeechResult
   
   try {
-    const speechResult = req.body.SpeechResult
     console.log(`Speech detected: "${speechResult}"`)
 
     const VoiceResponse = twilio.twiml.VoiceResponse
@@ -16,6 +20,17 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const serviceType = detectServiceType(speechResult)
 
     if (serviceType) {
+      // Update call state with service type
+      console.log(`🔧 Service type detected: ${serviceType}`)
+      const updateResult = await updateCallState(callSid, {
+        service_type: serviceType,
+        status: 'started',
+      })
+      
+      if (!updateResult.success) {
+        console.warn(`⚠️ Failed to update call state: ${updateResult.error}`)
+      }
+
       // Confirm service and ask for name
       response.say({
         voice: 'alice',
@@ -36,13 +51,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         voice: 'alice',
         rate: '1.2',
         pitch: '1.3',
-      }, 'Sorry, I did not get that, could you say your name again?')
+      }, 'Sorry, I did not get that, could you say your service type again?')
       response.pause({ length: 1 })
       response.say({
         voice: 'alice',
         rate: '1.2',
         pitch: '1.3',
-      }, 'I apologize, please say again what service you need.')
+      }, 'I apologize, please say again what service you need. You can say heating, AC, plumbing, or emergency.')
       
       response.gather({
         input: ['speech'],
@@ -57,7 +72,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Content-Type', 'application/xml')
     res.send(response.toString())
   } catch (e) {
-    console.error(`[${new Date().toISOString()}] ERROR in handle-speech:`, e)
+    console.error(`[${timestamp}] ERROR in handle-speech:`, e)
     
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()

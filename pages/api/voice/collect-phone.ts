@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import twilio from 'twilio'
+import { updateCallState } from '../../../lib/supabase'
 
 const authToken = process.env.TWILIO_AUTH_TOKEN
 
@@ -56,6 +57,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Format phone number
     const phoneNumber = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
     console.log(`✅ Customer phone: ${phoneNumber}`)
+
+    // Save phone to call state
+    const updateResult = await updateCallState(callSid, {
+      customer_phone: phoneNumber,
+      status: 'phone_collected',
+    })
+    
+    if (!updateResult.success) {
+      console.warn(`⚠️ Failed to save customer phone: ${updateResult.error}`)
+    } else {
+      console.log(`✅ Customer phone saved to call state`)
+    }
 
     // Create TwiML response - ask for address
     const twiml = new twilio.twiml.VoiceResponse()
