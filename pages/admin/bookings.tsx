@@ -81,7 +81,7 @@ export default function AdminBookings() {
   const totalDeposits = bookings.filter(b => b.depositPaid).length * 150
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       <Header />
 
       <main className="flex-grow w-full px-4 py-6">
