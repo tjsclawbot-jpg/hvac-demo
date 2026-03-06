@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import twilio from 'twilio'
+import { storeVoiceBooking, VoiceBooking as SupabaseVoiceBooking } from '../../../lib/supabase'
 
 const authToken = process.env.TWILIO_AUTH_TOKEN
 
@@ -44,9 +45,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp: new Date().toISOString(),
     }
 
-    // TODO: Create booking in Phase 1 system (call /api/bookings/create)
-    // For now, just log it
     console.log('📋 Voice Booking Created:', voiceBooking)
+
+    // Store booking in Supabase (graceful failure - continues even if DB fails)
+    const dbResult = await storeVoiceBooking({
+      call_sid: voiceBooking.callSid,
+      service_type: voiceBooking.serviceType,
+      customer_name: voiceBooking.customerName,
+      customer_phone: voiceBooking.customerPhone,
+      service_address: voiceBooking.serviceAddress,
+      preferred_time: voiceBooking.preferredTime,
+    })
+
+    if (!dbResult.success) {
+      console.warn('⚠️ Failed to store booking in Supabase, but continuing with confirmation:', dbResult.error)
+    }
 
     // Create TwiML response - confirmation
     const twiml = new twilio.twiml.VoiceResponse()
