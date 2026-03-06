@@ -17,9 +17,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (serviceType) {
       // Confirm service and ask for name
-      response.say(`Great! I found ${serviceType}.`)
-      response.pause({ length: 1 })
-      response.say('Now please say your name.')
+      response.say({
+        voice: 'alice',
+        rate: '1.2',
+        pitch: '1.3',
+      }, `Great! I found our ${serviceType} here. Now if you could please give me your name`)
       
       response.gather({
         input: ['speech'],

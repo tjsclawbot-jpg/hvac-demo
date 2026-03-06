@@ -37,7 +37,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const response = new VoiceResponse()
     
     console.log(`[${timestamp}] Adding say verb`)
-    response.say('Hi there! What service do you need?')
+    response.say({
+      voice: 'alice',
+      rate: '1.2',
+      pitch: '1.3',
+    }, 'Hi, thanks for calling ProFlow DMV. Are you calling about heating, AC, or an emergency service?')
     response.pause({ length: 1 })
     
     console.log(`[${timestamp}] Adding gather verb`)
