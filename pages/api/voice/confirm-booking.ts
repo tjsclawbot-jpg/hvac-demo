@@ -53,7 +53,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     twiml.say({
       voice: 'alice',
-    }, `Perfect! I've booked your ${voiceBooking.serviceType} appointment for ${voiceBooking.preferredTime}. You'll receive a confirmation text at ${voiceBooking.customerPhone}. Is there anything else I can help you with?`)
+      rate: '1.2',
+      pitch: '1.3',
+    }, `Perfect! I've booked your ${voiceBooking.serviceType} appointment for ${voiceBooking.preferredTime}. You'll receive a confirmation text at ${voiceBooking.customerPhone}. Let me know if there is anything else I can help you with today, otherwise you'll get an appointment notification shortly`)
 
     const gather = twiml.gather({
       input: ['speech'] as any,
@@ -72,7 +74,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error in confirm-booking:', error)
     
     const twiml = new twilio.twiml.VoiceResponse()
-    twiml.say('Sorry, I had trouble completing your booking. Our team will call you back shortly.')
+    twiml.say({
+      voice: 'alice',
+      rate: '1.2',
+      pitch: '1.3',
+    }, 'Sorry, I had trouble completing your booking. Our team will call you back shortly.')
     twiml.hangup()
     
     res.setHeader('Content-Type', 'application/xml')

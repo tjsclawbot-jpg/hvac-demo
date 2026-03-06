@@ -32,9 +32,17 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     } else {
       // Service not recognized, ask again
-      response.say('Sorry, I did not understand.')
+      response.say({
+        voice: 'alice',
+        rate: '1.2',
+        pitch: '1.3',
+      }, 'Sorry, I did not get that, could you say your name again?')
       response.pause({ length: 1 })
-      response.say('Please say what service you need.')
+      response.say({
+        voice: 'alice',
+        rate: '1.2',
+        pitch: '1.3',
+      }, 'I apologize, please say again what service you need.')
       
       response.gather({
         input: ['speech'],
@@ -53,7 +61,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()
-    response.say('Sorry, an error occurred.')
+    response.say({
+      voice: 'alice',
+      rate: '1.2',
+      pitch: '1.3',
+    }, 'Sorry, an error occurred.')
     response.hangup()
     
     res.status(200)
