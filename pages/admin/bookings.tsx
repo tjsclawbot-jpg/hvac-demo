@@ -212,7 +212,7 @@ export default function AdminBookings() {
 
           {/* Web Bookings List View */}
           {bookingType === 'web' && viewType === 'list' && (
-            <div className="space-y-4">
+            <div className="space-y-4 px-4 sm:px-6 lg:px-8">
               {filteredBookings.map(booking => (
                 <div
                   key={booking.id}
@@ -319,7 +319,7 @@ export default function AdminBookings() {
                 </div>
               )}
               
-              <div className="space-y-6 px-2">
+              <div className="space-y-6 px-4 sm:px-6 lg:px-8">
                 {filteredVoiceBookings.length > 0 ? (
                   filteredVoiceBookings.map(booking => (
                     <div
