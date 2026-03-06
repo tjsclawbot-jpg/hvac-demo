@@ -84,7 +84,7 @@ export default function AdminBookings() {
     <div className="min-h-screen flex flex-col bg-gray-100">
       <Header />
 
-      <main className="flex-grow w-full px-4 py-6">
+      <main className="flex-grow w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="w-full max-w-3xl mx-auto">
           {/* Page Header - Mobile First */}
           <div className="mb-8">
@@ -212,7 +212,7 @@ export default function AdminBookings() {
 
           {/* Web Bookings List View */}
           {bookingType === 'web' && viewType === 'list' && (
-            <div className="space-y-4 px-4 sm:px-6 lg:px-8">
+            <div className="space-y-4">
               {filteredBookings.map(booking => (
                 <div
                   key={booking.id}
@@ -319,7 +319,7 @@ export default function AdminBookings() {
                 </div>
               )}
               
-              <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+              <div className="space-y-6">
                 {filteredVoiceBookings.length > 0 ? (
                   filteredVoiceBookings.map(booking => (
                     <div
