@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Helvetica Neue', sans-serif;
+  background-color: #FFFFFF;
+  color: #374151;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+/* Home Depot HVAC Theme Utilities */
+.hvac-primary {
+  color: #FF6600;
+}
+
+.hvac-secondary {
+  color: #1F2937;
+}
+
+.hvac-accent {
+  color: #FCD34D;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply bg-hvac-orange text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-all duration-300;
+}
+
+.btn-secondary {
+  @apply bg-hvac-darkgray text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300;
+}
+
+.btn-outline {
+  @apply border-2 border-hvac-orange text-hvac-orange px-6 py-3 rounded-lg font-semibold hover:bg-orange-50 transition-all duration-300;
+}
+
+.btn-yellow {
+  @apply bg-hvac-yellow text-hvac-darkgray px-6 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-all duration-300;
+}
+
+/* Card Styles */
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-gray-200/50 p-6;
+}
+
+.card-hover {
+  @apply hover:shadow-md transition-all duration-200;
+}
+
+/* Grid and Layout */
+.grid-responsive {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+/* Typography */
+h1 {
+  @apply text-5xl font-bold text-hvac-darkgray;
+}
+
+h2 {
+  @apply text-4xl font-bold text-hvac-darkgray;
+}
+
+h3 {
+  @apply text-2xl font-bold text-hvac-darkgray;
+}
+
+h4 {
+  @apply text-xl font-semibold text-hvac-darkgray;
+}
+
+p {
+  @apply text-gray-600 leading-relaxed;
+}
+
+/* Form Elements */
+input,
+textarea,
+select {
+  @apply w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-hvac-orange focus:ring-2 focus:ring-orange-100 outline-none transition-all;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}
