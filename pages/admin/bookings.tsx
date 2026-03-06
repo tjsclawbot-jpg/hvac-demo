@@ -319,17 +319,20 @@ export default function AdminBookings() {
                 </div>
               )}
               
-              <div className="space-y-4">
+              <div className="space-y-6 px-2">
                 {filteredVoiceBookings.length > 0 ? (
                   filteredVoiceBookings.map(booking => (
                     <div
                       key={booking.id}
-                      className="bg-white border-2 border-purple-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all"
+                      className="bg-white border-2 border-purple-200 rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all transform hover:scale-[1.01]"
+                      style={{
+                        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+                      }}
                     >
                       {/* Card Header - Always Visible & Prominent */}
                       <button
                         onClick={() => setExpandedBookingId(expandedBookingId === booking.id ? null : booking.id)}
-                        className="w-full px-5 py-5 flex items-start justify-between gap-4 bg-gradient-to-r from-purple-50 to-transparent hover:from-purple-100 transition-colors touch-manipulation"
+                        className="w-full px-6 py-6 flex items-start justify-between gap-4 bg-gradient-to-r from-purple-50 to-transparent hover:from-purple-100 transition-colors touch-manipulation"
                       >
                         <div className="text-left flex-grow min-w-0">
                           <div className="flex items-center gap-2 mb-2">
@@ -350,7 +353,7 @@ export default function AdminBookings() {
                       {/* Card Details - Expandable */}
                       {expandedBookingId === booking.id && (
                         <>
-                          <div className="border-t-2 border-purple-200 px-5 py-5 space-y-5 bg-gray-50">
+                          <div className="border-t-2 border-purple-200 px-6 py-6 space-y-5 bg-gray-50">
                             {/* Service Info */}
                             <div className="bg-white rounded-lg p-4 border border-gray-200">
                               <p className="text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Service Type</p>
@@ -383,7 +386,7 @@ export default function AdminBookings() {
                           </div>
 
                           {/* Actions */}
-                          <div className="border-t-2 border-purple-200 px-5 py-5 space-y-3 bg-white">
+                          <div className="border-t-2 border-purple-200 px-6 py-6 space-y-3 bg-white">
                             <select
                               value={booking.status}
                               onChange={(e) => handleVoiceBookingStatusChange(booking.id, e.target.value)}
