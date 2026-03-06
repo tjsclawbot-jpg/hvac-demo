@@ -30,16 +30,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }, `Great, ${customerName}! Now I need your phone number. Please say your 10-digit phone number.`)
 
     const gather = twiml.gather({
-      input: ['speech', 'dtmf'] as any,
+      input: ['speech'] as any,
       action: '/api/voice/collect-phone',
       method: 'POST',
       timeout: 5,
-      numDigits: 10,
+      speechTimeout: 'auto',
     })
 
-    gather.say('Please enter your phone number.')
-
-    twiml.redirect('/api/voice/collect-name')
+    gather.say('Please say your phone number.')
 
     res.setHeader('Content-Type', 'application/xml')
     res.status(200).send(twiml.toString())

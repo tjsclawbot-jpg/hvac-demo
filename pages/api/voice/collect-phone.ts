@@ -16,19 +16,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const digits = req.body.Digits
+    const speechResult = req.body.SpeechResult || ''
     const callSid = req.body.CallSid
+
+    console.log(`📱 Phone speech input: "${speechResult}"`)
+
+    // Extract digits from spoken phone number
+    const digits = extractPhoneDigits(speechResult)
+    
+    if (!digits || digits.length < 10) {
+      console.log(`❌ Invalid phone (got ${digits?.length || 0} digits): "${speechResult}"`)
+      
+      const twiml = new twilio.twiml.VoiceResponse()
+      twiml.say('Sorry, I did not get a valid phone number. Please try again.')
+      twiml.pause({ length: 1 })
+      twiml.say('Please say your phone number, like 5 5 5 1 2 3 4.')
+      
+      const gather = twiml.gather({
+        input: ['speech'] as any,
+        action: '/api/voice/collect-phone',
+        method: 'POST',
+        timeout: 5,
+        speechTimeout: 'auto',
+      })
+      
+      res.setHeader('Content-Type', 'application/xml')
+      res.status(200).send(twiml.toString())
+      return
+    }
 
     // Format phone number
     const phoneNumber = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-    console.log(`📱 Customer phone: ${phoneNumber}`)
+    console.log(`✅ Customer phone: ${phoneNumber}`)
 
     // Create TwiML response - ask for address
     const twiml = new twilio.twiml.VoiceResponse()
 
-    twiml.say({
-      voice: 'alice',
-    }, `Perfect! Now I need the address where you need service. Please say your street address, city, and state.`)
+    twiml.say(`Great! I got your number. Now I need the address where you need service. Please say your street address, city, and state.`)
+    twiml.pause({ length: 1 })
 
     const gather = twiml.gather({
       input: ['speech'] as any,
@@ -40,18 +65,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     gather.say('Please say your address.')
 
-    twiml.redirect('/api/voice/collect-phone')
-
     res.setHeader('Content-Type', 'application/xml')
     res.status(200).send(twiml.toString())
   } catch (error) {
     console.error('Error in collect-phone:', error)
     
     const twiml = new twilio.twiml.VoiceResponse()
-    twiml.say('Sorry, I did not get that. Let me try again.')
+    twiml.say('Sorry, an error occurred.')
     twiml.hangup()
     
     res.setHeader('Content-Type', 'application/xml')
     res.status(200).send(twiml.toString())
   }
+}
+
+function extractPhoneDigits(speech: string): string {
+  // Remove all non-digit characters
+  const digits = speech.replace(/\D/g, '')
+  // Return up to 10 digits (ignore country code if provided)
+  return digits.slice(-10)
 }

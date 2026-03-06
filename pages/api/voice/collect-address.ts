@@ -38,8 +38,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     gather.say('Please tell me your preferred appointment time.')
 
-    twiml.redirect('/api/voice/collect-address')
-
     res.setHeader('Content-Type', 'application/xml')
     res.status(200).send(twiml.toString())
   } catch (error) {
