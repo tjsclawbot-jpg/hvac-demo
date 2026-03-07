@@ -280,313 +280,125 @@ export default function AdminBookings() {
             <p className="text-base md:text-lg text-gray-600 font-medium">Manage your customer bookings from web and voice channels</p>
           </div>
 
-          {/* Primary Metrics - Large Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {/* Essential Metrics - Small Grid (Venus-Inspired) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
             {/* Total Bookings */}
-            <div className="lg:col-span-1 bg-gradient-to-br from-hvac-darkgray to-gray-800 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Total Bookings</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{totalBookings}</p>
-              </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">{webBookings} web • {voiceBookingsCount} voice</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Total Bookings</p>
+              <p className="text-3xl md:text-4xl font-bold text-hvac-darkgray">{totalBookings}</p>
+              <p className="text-xs text-gray-500 mt-2">{webBookings} web • {voiceBookingsCount} voice</p>
             </div>
 
-            {/* Upcoming */}
-            <div className="bg-gradient-to-br from-hvac-orange to-orange-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Upcoming (Pending + Confirmed)</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{upcomingCount}</p>
-              </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${totalBookings > 0 ? (upcomingCount / totalBookings) * 100 : 0}%` }}
-                ></div>
-              </div>
+            {/* Upcoming Jobs */}
+            <div className="bg-white rounded-xl border border-orange-200 p-4 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Upcoming</p>
+              <p className="text-3xl md:text-4xl font-bold text-hvac-orange">{upcomingCount}</p>
+              <p className="text-xs text-gray-500 mt-2">Confirmed & Pending</p>
             </div>
 
-            {/* Jobs In Progress */}
-            <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Jobs In Progress</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsInProgress}</p>
-              </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${totalBookings > 0 ? (jobsInProgress / totalBookings) * 100 : 0}%` }}
-                ></div>
-              </div>
+            {/* In Progress */}
+            <div className="bg-white rounded-xl border border-yellow-200 p-4 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">In Progress</p>
+              <p className="text-3xl md:text-4xl font-bold text-yellow-600">{jobsInProgress}</p>
+              <p className="text-xs text-gray-500 mt-2">Active jobs</p>
             </div>
 
-            {/* Jobs Completed */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Jobs Completed (Total)</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsCompleted}</p>
-              </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">Web & Voice combined</p>
+            {/* Completed Today */}
+            <div className="bg-white rounded-xl border border-green-200 p-4 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Completed</p>
+              <p className="text-3xl md:text-4xl font-bold text-green-600">{jobsCompleted}</p>
+              <p className="text-xs text-gray-500 mt-2">Total completed</p>
             </div>
 
-            {/* Contractor Pipeline */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">In Contractor Pipeline</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsInContractorPipeline}</p>
+            {/* New Clients (Voice vs Web) */}
+            <div className="bg-white rounded-xl border border-purple-200 p-4 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">New Clients</p>
+              <div className="flex gap-2 items-center">
+                <span className="text-2xl font-bold text-blue-600">{webBookings}</span>
+                <span className="text-xs text-gray-400">web</span>
+                <span className="text-2xl font-bold text-purple-600">{voiceBookingsCount}</span>
+                <span className="text-xs text-gray-400">voice</span>
               </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${contractorPipelineHealth}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Deposits Collected */}
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Deposits Collected</p>
-                <p className="text-4xl md:text-5xl font-bold mt-4 leading-tight">{formatCurrency(totalDeposits)}</p>
-              </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">{bookings.filter(b => b.depositPaid).length} paid</p>
+              <p className="text-xs text-gray-500 mt-2">{webPercentage}% / {voicePercentage}%</p>
             </div>
           </div>
 
-          {/* Breakdown Cards - Secondary Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
-            {/* Voice vs Web Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">📊 Voice vs Web Bookings</h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">🌐 Web</p>
-                    <p className="text-xl md:text-2xl font-bold text-blue-600">{webBookings}</p>
-                  </div>
-                  <div className="h-3 bg-blue-100 rounded-full overflow-hidden border border-blue-200">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                      style={{ width: `${webPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">{webPercentage}% of total</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">🎤 Voice</p>
-                    <p className="text-xl md:text-2xl font-bold text-purple-600">{voiceBookingsCount}</p>
-                  </div>
-                  <div className="h-3 bg-purple-100 rounded-full overflow-hidden border border-purple-200">
-                    <div 
-                      className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all"
-                      style={{ width: `${voicePercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">{voicePercentage}% of total</p>
-                </div>
-              </div>
+          {/* Navigation Bar - Clean & Simple */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-8 shadow-sm flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setBookingType('web')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all touch-manipulation min-h-[40px] ${
+                  bookingType === 'web'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                🌐 Web
+              </button>
+              <button
+                onClick={() => setBookingType('voice')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all touch-manipulation min-h-[40px] ${
+                  bookingType === 'voice'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                🎤 Voice
+              </button>
             </div>
 
-            {/* Status Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">🎯 Status Breakdown</h3>
-              
-              <div className="space-y-5">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">⏱ Pending</p>
-                    <p className="text-lg md:text-xl font-bold text-yellow-600">{statusBreakdown.pending}</p>
-                  </div>
-                  <div className="h-2.5 bg-yellow-100 rounded-full overflow-hidden border border-yellow-200">
-                    <div 
-                      className="h-full bg-yellow-500 rounded-full transition-all"
-                      style={{ width: `${pendingPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{pendingPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">✓ Confirmed</p>
-                    <p className="text-lg md:text-xl font-bold text-green-600">{statusBreakdown.confirmed}</p>
-                  </div>
-                  <div className="h-2.5 bg-green-100 rounded-full overflow-hidden border border-green-200">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ width: `${confirmedPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{confirmedPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">⚡ In Progress</p>
-                    <p className="text-lg md:text-xl font-bold text-orange-600">{statusBreakdown.inProgress}</p>
-                  </div>
-                  <div className="h-2.5 bg-orange-100 rounded-full overflow-hidden border border-orange-200">
-                    <div 
-                      className="h-full bg-orange-500 rounded-full transition-all"
-                      style={{ width: `${inProgressPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{inProgressPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">✓✓ Completed</p>
-                    <p className="text-lg md:text-xl font-bold text-emerald-600">{statusBreakdown.completed}</p>
-                  </div>
-                  <div className="h-2.5 bg-emerald-100 rounded-full overflow-hidden border border-emerald-200">
-                    <div 
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{ width: `${completedPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{completedPercentage}%</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Contractor Pipeline Health */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">🔧 Pipeline Health</h3>
-              
-              <div className="space-y-6">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border-2 border-blue-300">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm md:text-base font-semibold text-blue-900">Overall Health</p>
-                    <p className="text-3xl md:text-4xl font-bold text-blue-600">{contractorPipelineHealth}%</p>
-                  </div>
-                  <div className="h-4 bg-white rounded-full overflow-hidden border-2 border-blue-300">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                      style={{ width: `${contractorPipelineHealth}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">📦</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">In Pipeline</p>
-                      <p className="text-2xl md:text-3xl font-bold text-blue-600">{jobsInContractorPipeline}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">✓</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">Completed</p>
-                      <p className="text-2xl md:text-3xl font-bold text-green-600">{jobsCompleted}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">⚠️</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">Status</p>
-                      <p className="text-lg md:text-xl font-bold text-gray-700">{contractorPipelineHealth > 50 ? '✓ Healthy' : '⚠️ Needs Attention'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-7 mb-10 shadow-sm">
-            {/* Booking Type Selector */}
-            <div className="mb-7 pb-7 border-b border-gray-200">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">Booking Type</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setBookingType('web')}
-                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
-                    bookingType === 'web'
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-150 active:bg-gray-200'
-                  }`}
-                >
-                  🌐 Web
-                </button>
-                <button
-                  onClick={() => setBookingType('voice')}
-                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
-                    bookingType === 'voice'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md hover:shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-150 active:bg-gray-200'
-                  }`}
-                >
-                  🎤 Voice
-                </button>
-              </div>
-            </div>
-
-            {/* View Type Selector */}
+            {/* View Mode Toggle (Web only) */}
             {bookingType === 'web' && (
-              <div className="mb-7 pb-7 border-b border-gray-200">
-                <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">View Mode</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setViewType('list')}
-                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
-                      viewType === 'list'
-                        ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                        : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-150 active:bg-gray-200'
-                    }`}
-                  >
-                    📋 List
-                  </button>
-                  <button
-                    onClick={() => setViewType('calendar')}
-                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
-                      viewType === 'calendar'
-                        ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                        : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-150 active:bg-gray-200'
-                    }`}
-                  >
-                    📅 Calendar
-                  </button>
-                </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setViewType('list')}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all touch-manipulation min-h-[40px] ${
+                    viewType === 'list'
+                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📋 List View
+                </button>
+                <button
+                  onClick={() => setViewType('calendar')}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all touch-manipulation min-h-[40px] ${
+                    viewType === 'calendar'
+                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📅 Calendar View
+                </button>
               </div>
             )}
 
-            {/* Filters & Sort */}
-            <div className="space-y-3">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600">Filters</p>
+            {/* Filter Dropdown */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hvac-orange focus:border-hvac-orange bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[40px]"
+            >
+              <option value="all">📊 All</option>
+              <option value="pending">⏱ Pending</option>
+              <option value="confirmed">✓ Confirmed</option>
+              <option value="in-progress">⚡ In Progress</option>
+              <option value="completed">✓✓ Completed</option>
+            </select>
+
+            {/* Sort (Voice only) */}
+            {bookingType === 'voice' && (
               <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-hvac-orange focus:border-hvac-orange bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+                className="w-full sm:w-auto px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[40px]"
               >
-                <option value="all">📊 All Status</option>
-                <option value="pending">⏱ Pending</option>
-                <option value="confirmed">✓ Confirmed</option>
-                <option value="completed">✓✓ Completed</option>
-                <option value="no-show">✗ No-Show</option>
-                <option value="cancelled">⊘ Cancelled</option>
+                <option value="newest">📅 Newest</option>
+                <option value="oldest">📅 Oldest</option>
               </select>
-
-              {/* Sort Order */}
-              {bookingType === 'voice' && (
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-                  className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
-                >
-                  <option value="newest">📅 Newest First</option>
-                  <option value="oldest">📅 Oldest First</option>
-                </select>
-              )}
-            </div>
+            )}
           </div>
-
           {/* Web Bookings List View */}
           {bookingType === 'web' && viewType === 'list' && (
             <div className="space-y-4">
@@ -857,19 +669,19 @@ export default function AdminBookings() {
             </div>
           )}
 
-          {/* Web Bookings Calendar View */}
+          {/* Web Bookings Calendar View - Side-by-Side Layout */}
           {bookingType === 'web' && viewType === 'calendar' && (
-            <div className="space-y-6">
-              {/* Calendar Section */}
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
-                <h2 className="text-2xl md:text-3xl font-bold text-hvac-darkgray mb-6">Select a Date</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Calendar - Left Side */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm h-fit">
+                <h3 className="text-lg font-bold text-hvac-darkgray mb-4">📅 Calendar</h3>
                 
                 {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-2 md:gap-3">
+                <div className="grid grid-cols-7 gap-1">
                   {/* Day headers */}
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center font-bold text-xs md:text-sm text-gray-600 py-3 uppercase tracking-wide">
-                      {day.charAt(0)}
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                    <div key={day} className="text-center font-bold text-xs text-gray-600 py-2">
+                      {day}
                     </div>
                   ))}
                   
@@ -889,17 +701,17 @@ export default function AdminBookings() {
                       <button
                         key={idx}
                         onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                        className={`aspect-square p-2 rounded-lg border-2 transition-all flex flex-col items-center justify-center text-sm font-bold touch-manipulation min-h-[44px] ${
+                        className={`aspect-square p-1 rounded text-xs font-bold transition-all flex flex-col items-center justify-center touch-manipulation ${
                           isSelected
-                            ? 'border-hvac-orange bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-lg'
+                            ? 'bg-hvac-orange text-white shadow-md'
                             : dayBookings.length > 0
-                            ? 'border-hvac-orange bg-gradient-to-br from-orange-50 to-orange-100 text-hvac-darkgray hover:shadow-md'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            ? 'bg-orange-100 text-hvac-orange border border-orange-300'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                         }`}
                       >
                         <div>{date.getDate()}</div>
                         {dayBookings.length > 0 && (
-                          <div className={`text-xs mt-0.5 font-bold ${isSelected ? 'text-orange-100' : 'text-hvac-orange'}`}>
+                          <div className="text-xs">
                             {dayBookings.length}
                           </div>
                         )}
@@ -909,147 +721,111 @@ export default function AdminBookings() {
                 </div>
               </div>
 
-              {/* Day View Section */}
-              {selectedDate && (
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-300 p-6 md:p-8 shadow-md">
-                  <div className="mb-8">
-                    <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-2">
-                      📅 {formatDate(selectedDate)}
-                    </h2>
-                    <p className="text-lg text-gray-700">
-                      {dayViewBookings.length} appointment{dayViewBookings.length !== 1 ? 's' : ''} scheduled
-                    </p>
-                  </div>
+              {/* Job List - Right Side */}
+              <div className="lg:col-span-2">
+                {selectedDate ? (
+                  <div className="space-y-3">
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-bold text-hvac-darkgray mb-1">
+                        📅 {formatDate(selectedDate)}
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {dayViewBookings.length} appointment{dayViewBookings.length !== 1 ? 's' : ''} scheduled
+                      </p>
+                    </div>
 
-                  {dayViewBookings.length > 0 ? (
-                    <div className="space-y-4">
-                      {dayViewBookings.map(booking => {
-                        const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
-                        const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
-                        
-                        return (
-                          <div
-                            key={booking.id}
-                            onTouchStart={(e) => handleTouchStart(e, booking.id)}
-                            onTouchEnd={(e) => handleTouchEnd(e, booking.id)}
-                            className="bg-white rounded-2xl border-2 border-gray-300 p-5 md:p-6 shadow-sm hover:shadow-md transition-all"
-                          >
-                            {/* Appointment Header */}
-                            <div className="flex items-start justify-between gap-4 mb-4">
-                              <div className="flex-grow">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <span className="text-3xl">{serviceIcon}</span>
-                                  <div>
-                                    <p className="text-sm text-gray-600">⏰ {booking.time}</p>
-                                    <p className="text-2xl md:text-3xl font-bold text-hvac-darkgray">
-                                      {booking.customerName}
-                                    </p>
-                                  </div>
+                    {dayViewBookings.length > 0 ? (
+                      <div className="space-y-3">
+                        {dayViewBookings.map(booking => {
+                          const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
+                          const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
+                          
+                          return (
+                            <div
+                              key={booking.id}
+                              className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all"
+                            >
+                              {/* Header - Time, Name, Status */}
+                              <div className="flex items-start justify-between gap-3 mb-3">
+                                <div className="flex-grow min-w-0">
+                                  <p className="text-xs text-gray-600 font-semibold">⏰ {booking.time}</p>
+                                  <h4 className="text-lg font-bold text-hvac-darkgray truncate">{booking.customerName}</h4>
+                                  <p className="text-sm text-gray-600">{serviceIcon} {booking.serviceType.replace('-', ' ')}</p>
                                 </div>
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                  <span>{statusConfig.icon}</span>
+                                </span>
                               </div>
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2 whitespace-nowrap`}>
-                                <span>{statusConfig.icon}</span>
-                                <span>{booking.status.replace('-', ' ').toUpperCase()}</span>
-                              </span>
-                            </div>
 
-                            {/* Service Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-sm md:text-base">
-                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                <p className="text-xs text-gray-600 font-semibold">Service Type</p>
-                                <p className="font-bold text-gray-800">{booking.serviceType.replace('-', ' ')}</p>
+                              {/* Address & Phone */}
+                              <div className="bg-gray-50 rounded p-2 mb-3 text-xs">
+                                <p className="text-gray-600 font-semibold">📍 {booking.customerAddress}</p>
                               </div>
-                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                <p className="text-xs text-gray-600 font-semibold">📞 Phone</p>
-                                <p className="font-bold text-gray-800 font-mono break-all">{booking.customerPhone}</p>
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                <p className="text-xs text-gray-600 font-semibold">Deposit</p>
-                                <p className="font-bold text-green-600">{formatCurrency(booking.depositAmount)}</p>
-                              </div>
-                            </div>
 
-                            {/* Address */}
-                            <div className="bg-blue-50 rounded-lg p-3 mb-4 border border-blue-200">
-                              <p className="text-xs text-blue-700 font-semibold">📍 Address</p>
-                              <p className="text-blue-900 font-medium">{booking.customerAddress}</p>
-                            </div>
-
-                            {/* Progress Indicator */}
-                            <div className="mb-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-gray-700 uppercase">Progress</p>
-                                <p className="text-sm font-bold text-gray-700">{getProgressPercentage(booking.status)}%</p>
-                              </div>
-                              <div className="h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-hvac-orange to-orange-500 rounded-full transition-all duration-300"
-                                  style={{ width: `${getProgressPercentage(booking.status)}%` }}
-                                ></div>
-                              </div>
-                              <div className="flex justify-between mt-2 text-xs text-gray-600 font-semibold">
-                                <span>Pending</span>
-                                <span>Confirmed</span>
-                                <span>In Progress</span>
-                                <span>Complete</span>
-                              </div>
-                            </div>
-
-                            {/* Assigned To */}
-                            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                              <p className="text-xs text-purple-700 font-semibold mb-1">👤 Assigned To</p>
-                              <p className="text-purple-900 font-bold">
-                                {booking.assignedTo || 'Unassigned'}
-                              </p>
-                            </div>
-
-                            {/* Interactive Status Button & Actions */}
-                            <div className="space-y-3">
-                              {/* Interactive Status Button */}
-                              {booking.status !== 'completed' && (
-                                <div className="flex gap-3">
+                              {/* Quick Actions - Compact */}
+                              <div className="flex gap-2">
+                                {booking.status === 'pending' && (
                                   <button
-                                    onClick={() => handleInteractiveStatusChange(booking.id, booking.status)}
-                                    className={`flex-1 px-4 py-4 md:py-5 rounded-xl font-bold text-lg text-white transition-all shadow-md hover:shadow-lg active:shadow-sm touch-manipulation min-h-[44px] ${statusConfig.buttonBg}`}
+                                    onClick={() => handleStatusChange(booking.id, 'confirmed')}
+                                    className="flex-1 px-2 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs font-bold transition-all"
                                   >
-                                    {booking.status === 'pending' && '✓ Confirm Job'}
-                                    {booking.status === 'confirmed' && '➜ Swipe → for Progress'}
-                                    {booking.status === 'in-progress' && '✓ Mark Complete'}
+                                    ✓ Confirm
                                   </button>
-                                </div>
-                              )}
-
-                              {/* Assign Colleague Button */}
-                              <button
-                                onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
-                                className="w-full px-4 py-3 md:py-4 bg-purple-100 hover:bg-purple-200 active:bg-purple-300 text-purple-700 rounded-xl font-bold transition-all border-2 border-purple-300 touch-manipulation min-h-[44px]"
-                              >
-                                👤 Assign to Colleague
-                              </button>
-
-                              {/* Edit & Details Buttons */}
-                              <div className="grid grid-cols-2 gap-3">
-                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation min-h-[44px]">
-                                  📄 Full Details
+                                )}
+                                {booking.status === 'confirmed' && (
+                                  <button
+                                    onClick={() => handleStatusChange(booking.id, 'in-progress')}
+                                    className="flex-1 px-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-bold transition-all"
+                                  >
+                                    ➜ Start
+                                  </button>
+                                )}
+                                {booking.status === 'in-progress' && (
+                                  <button
+                                    onClick={() => setCompletionPathModal({ bookingId: booking.id })}
+                                    className="flex-1 px-2 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-bold transition-all"
+                                  >
+                                    ✓ Complete
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
+                                  className="flex-1 px-2 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded text-xs font-bold transition-all"
+                                >
+                                  👤 Assign
                                 </button>
-                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation min-h-[44px]">
-                                  ✏️ Edit
+                                <button
+                                  onClick={() => {
+                                    setSelectedBooking(booking)
+                                    setRefundAmount(145)
+                                    setRefundModalOpen(true)
+                                  }}
+                                  className="px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-all"
+                                  title="Refund"
+                                >
+                                  💰
                                 </button>
                               </div>
-                            </div>
                           </div>
                         )
                       })}
                     </div>
-                  ) : (
-                    <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-blue-300">
-                      <p className="text-3xl mb-2">📭</p>
-                      <p className="text-lg font-bold text-gray-700">No appointments scheduled</p>
-                      <p className="text-sm text-gray-600">Pick another date or create a new booking</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                        <p className="text-3xl mb-2">📭</p>
+                        <p className="font-bold text-gray-700">No appointments</p>
+                        <p className="text-sm text-gray-600">for this date</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                    <p className="text-3xl mb-2">📅</p>
+                    <p className="font-bold text-gray-700">Select a date to view jobs</p>
+                    <p className="text-sm text-gray-600">Click a date on the calendar</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
