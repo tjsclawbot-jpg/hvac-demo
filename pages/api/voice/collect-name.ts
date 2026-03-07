@@ -43,9 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const twiml = new twilio.twiml.VoiceResponse()
 
     twiml.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, `Great, ${customerName}! Now I just need to collect your phone number. Please type or say your 10-digit phone number.`)
 
     const gather = twiml.gather({
@@ -65,9 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const twiml = new twilio.twiml.VoiceResponse()
     twiml.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, 'Sorry, something went wrong. Please try again.')
     twiml.hangup()
     

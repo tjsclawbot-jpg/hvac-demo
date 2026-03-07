@@ -42,9 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const twiml = new twilio.twiml.VoiceResponse()
 
     twiml.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, `Excellent! Would you like a same-day appointment if available, or would you prefer a specific date? Please say same-day, tomorrow, or a specific date.`)
 
     const gather = twiml.gather({
@@ -64,9 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const twiml = new twilio.twiml.VoiceResponse()
     twiml.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, 'Sorry, I did not understand. Please try again.')
     twiml.hangup()
     

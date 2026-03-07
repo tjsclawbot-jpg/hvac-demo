@@ -33,9 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Confirm service and ask for name
       response.say({
-        voice: 'alice',
-        rate: '1.2',
-        pitch: '1.3',
+        voice: 'alice' as any,
       }, `Great! I found our ${serviceType} here. Now if you could please give me your name`)
       
       response.gather({
@@ -48,15 +46,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Service not recognized, ask again
       response.say({
-        voice: 'alice',
-        rate: '1.2',
-        pitch: '1.3',
+        voice: 'alice' as any,
       }, 'Sorry, I did not get that, could you say your service type again?')
       response.pause({ length: 1 })
       response.say({
-        voice: 'alice',
-        rate: '1.2',
-        pitch: '1.3',
+        voice: 'alice' as any,
       }, 'I apologize, please say again what service you need. You can say heating, AC, plumbing, or emergency.')
       
       response.gather({
@@ -77,9 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()
     response.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, 'Sorry, an error occurred.')
     response.hangup()
     

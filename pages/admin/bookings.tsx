@@ -17,8 +17,10 @@ interface Booking {
   time: string
   depositAmount: number
   depositPaid: boolean
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'no-show' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'in-contractor-pipeline' | 'completed-not-in-pipeline' | 'no-show' | 'cancelled'
   assignedTo?: string
+  contractor_assigned?: string
+  progression_path?: 'progressed' | 'not_progressed'
 }
 
 // Hardcoded team members for colleague assignment
@@ -34,7 +36,9 @@ const statusColorMap = {
   pending: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⏱', buttonText: 'Confirm Job', buttonBg: 'bg-gray-400 hover:bg-gray-500' },
   confirmed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓', buttonText: 'Confirmed', buttonBg: 'bg-green-500 hover:bg-green-600' },
   'in-progress': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', icon: '⚡', buttonText: 'In Progress', buttonBg: 'bg-orange-500 hover:bg-orange-600' },
-  completed: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', icon: '✓✓', buttonText: 'Completed', buttonBg: 'bg-purple-500 cursor-not-allowed opacity-75' },
+  completed: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', icon: '🔍', buttonText: 'Inspected', buttonBg: 'bg-blue-500 cursor-not-allowed opacity-75' },
+  'in-contractor-pipeline': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓✓', buttonText: 'In Pipeline', buttonBg: 'bg-green-500 cursor-not-allowed opacity-75' },
+  'completed-not-in-pipeline': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '✓', buttonText: 'Completed', buttonBg: 'bg-gray-500 cursor-not-allowed opacity-75' },
   'no-show': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', icon: '✗', buttonText: 'No-Show', buttonBg: 'bg-red-500' },
   cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⊘', buttonText: 'Cancelled', buttonBg: 'bg-gray-400' }
 }
@@ -67,6 +71,8 @@ export default function AdminBookings() {
   const [assignColleagueModal, setAssignColleagueModal] = useState<{ bookingId: string } | null>(null)
   const [touchStart, setTouchStart] = useState<{ x: number; bookingId: string } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
+  const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
   
   // Helper function to get progress percentage for status
   const getProgressPercentage = (status: string) => {
@@ -123,7 +129,12 @@ export default function AdminBookings() {
     let nextStatus = 'pending'
     if (currentBooking.status === 'pending') nextStatus = 'confirmed'
     else if (currentBooking.status === 'confirmed') nextStatus = 'in-progress'
-    else if (currentBooking.status === 'in-progress') nextStatus = 'completed'
+    else if (currentBooking.status === 'in-progress') {
+      // Show two-path completion dialog instead of directly completing
+      setCompletionPathModal({ bookingId })
+      setStatusConfirmDialog(null)
+      return
+    }
 
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: nextStatus as any } : b
@@ -136,6 +147,41 @@ export default function AdminBookings() {
       b.id === bookingId ? { ...b, status: 'pending' } : b
     ))
     setStatusConfirmDialog(null)
+  }
+
+  const handleCompletionPath = (bookingId: string, path: 'progressed' | 'not_progressed') => {
+    const newStatus = path === 'progressed' ? 'in-contractor-pipeline' : 'completed-not-in-pipeline'
+    
+    if (path === 'progressed') {
+      // Open contractor selection dialog
+      setSelectContractorModal({ bookingId })
+      setCompletionPathModal(null)
+    } else {
+      // Mark as completed not in pipeline
+      setBookings(bookings.map(b => 
+        b.id === bookingId 
+          ? { ...b, status: newStatus as any, progression_path: path }
+          : b
+      ))
+      setCompletionPathModal(null)
+    }
+  }
+
+  const handleSelectContractor = (bookingId: string, contractorId: string) => {
+    const contractor = TEAM_MEMBERS.find(tm => tm.id === contractorId)
+    if (!contractor) return
+
+    setBookings(bookings.map(b => 
+      b.id === bookingId 
+        ? { 
+            ...b, 
+            status: 'in-contractor-pipeline', 
+            progression_path: 'progressed',
+            contractor_assigned: contractor.name 
+          } 
+        : b
+    ))
+    setSelectContractorModal(null)
   }
 
   const handleAssignColleague = (bookingId: string, colleagueId: string) => {
@@ -1088,6 +1134,75 @@ export default function AdminBookings() {
                   return null
                 })()}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Two-Path Completion Dialog */}
+      {completionPathModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
+            <div className="px-5 md:px-7 py-8 md:py-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">Job Completion Path</h2>
+              <p className="text-lg text-gray-700 mb-8">Choose how to proceed with this completed job:</p>
+
+              <div className="space-y-4 mb-8">
+                <button
+                  onClick={() => handleCompletionPath(completionPathModal.bookingId, 'progressed')}
+                  className="w-full p-5 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 active:from-green-200 active:to-green-300 rounded-xl border-3 border-green-400 transition-all text-left touch-manipulation"
+                >
+                  <p className="text-xl font-bold text-green-900 mb-2">✓ Assign to Contractor Work</p>
+                  <p className="text-sm text-green-700">Job progresses to contractor pipeline</p>
+                </button>
+
+                <button
+                  onClick={() => handleCompletionPath(completionPathModal.bookingId, 'not_progressed')}
+                  className="w-full p-5 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 active:from-gray-200 active:to-gray-300 rounded-xl border-3 border-gray-400 transition-all text-left touch-manipulation"
+                >
+                  <p className="text-xl font-bold text-gray-900 mb-2">✓ Complete, Not Progressing</p>
+                  <p className="text-sm text-gray-700">Job is closed out, no further work</p>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setCompletionPathModal(null)}
+                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Select Contractor Dialog */}
+      {selectContractorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
+            <div className="px-5 md:px-7 py-8 md:py-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">👤 Assign to Contractor</h2>
+              <p className="text-lg text-gray-700 mb-6">Select a contractor for this job:</p>
+
+              <div className="mb-6 space-y-3 max-h-64 overflow-y-auto">
+                {TEAM_MEMBERS.map(contractor => (
+                  <button
+                    key={contractor.id}
+                    onClick={() => handleSelectContractor(selectContractorModal.bookingId, contractor.id)}
+                    className="w-full p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 active:from-indigo-200 active:to-indigo-300 rounded-xl border-2 border-indigo-300 transition-all text-left touch-manipulation"
+                  >
+                    <p className="text-lg font-bold text-indigo-900">{contractor.name}</p>
+                    <p className="text-sm text-indigo-700">{contractor.role}</p>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setSelectContractorModal(null)}
+                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

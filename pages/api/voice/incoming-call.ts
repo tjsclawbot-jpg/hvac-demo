@@ -51,9 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`[${timestamp}] Adding say verb`)
     response.say({
-      voice: 'alice',
-      rate: '1.2',
-      pitch: '1.3',
+      voice: 'alice' as any,
     }, 'Hi, thanks for calling ProFlow DMV. Are you calling about heating, AC, or an emergency service?')
     response.pause({ length: 1 })
     
