@@ -1,8 +1,19 @@
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
-const SUPABASE_URL = 'https://qeoxavbzuxqhbwwlpiss.supabase.co';
-const SERVICE_ROLE_KEY = 'sb_secret_h6v7n85vg4ts25VjUrzdTw_oH_b-rt8';
-const ANON_KEY = 'sb_publishable_1TgdF0fNMe8Bopiog21KIQ_pT8JRtXX';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+// Validate required environment variables
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) {
+  console.error('❌ Missing required environment variables:');
+  if (!SUPABASE_URL) console.error('   - SUPABASE_URL');
+  if (!SERVICE_ROLE_KEY) console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  if (!ANON_KEY) console.error('   - SUPABASE_ANON_KEY');
+  console.error('\nAdd these to .env.local and try again.');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
