@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
@@ -6,6 +6,7 @@ import { SAMPLE_BOOKINGS } from '@/lib/bookingData'
 import { SAMPLE_VOICE_BOOKINGS, VoiceBooking, VOICE_SERVICE_TYPES } from '@/lib/voiceBookingData'
 import { getStatusColor, formatDate, formatCurrency, getHoursUntilAppointment } from '@/lib/bookingManagement'
 import { CONTRACTORS, getContractorById } from '@/lib/contractors'
+import { sendContractorAssignmentSMS, sendCustomerStatusUpdateSMS } from '@/lib/smsHelper'
 
 interface Booking {
   id: string
@@ -116,34 +117,109 @@ export default function AdminBookings() {
     const booking = bookings.find(b => b.id === bookingId)
     if (!booking) return
 
-    // Update UI first
+    // Check if SMS has already been sent for this status
+    const sentStatuses = booking.sms_sent_statuses || []
+    const smsSentForThisStatus = sentStatuses.includes(newStatus)
+
+    if (smsSentForThisStatus) {
+      console.log(`⚠️ SMS already sent for status '${newStatus}' on booking ${bookingId}`)
+    }
+
+    // Update UI first - add new status to sms_sent_statuses to track it
     setBookings(bookings.map(b => 
-      b.id === bookingId ? { ...b, status: newStatus as any } : b
+      b.id === bookingId ? { 
+        ...b, 
+        status: newStatus as any,
+        sms_sent_statuses: smsSentForThisStatus ? (b.sms_sent_statuses || []) : [...(b.sms_sent_statuses || []), newStatus]
+      } : b
     ))
 
-    // Send SMS notifications for status changes
-    if (newStatus === 'in-progress') {
-      // Send customer SMS
-      await sendCustomerStatusUpdateSMS(
-        booking.customerPhone,
-        newStatus,
-        booking.customerAddress,
-        undefined,
-        booking.customerName,
-        bookingId
-      )
-    } else if (newStatus === 'completed' || newStatus === 'in-contractor-pipeline') {
-      // Send customer SMS for completion
-      if (newStatus === 'completed') {
-        await sendCustomerStatusUpdateSMS(
-          booking.customerPhone,
-          newStatus,
-          booking.customerAddress,
-          undefined,
-          booking.customerName,
-          bookingId
-        )
+    // Send SMS notifications for status changes (only if not already sent)
+    if (!smsSentForThisStatus) {
+      try {
+        if (newStatus === 'confirmed') {
+          // Send confirmation SMS to customer
+          await sendCustomerStatusUpdateSMS(
+            booking.customerPhone,
+            newStatus,
+            booking.customerAddress,
+            undefined,
+            booking.customerName,
+            bookingId
+          )
+          console.log(`✅ Sent confirmation SMS to customer for booking ${bookingId}`)
+        } else if (newStatus === 'in-progress') {
+          // Send SMS to customer
+          await sendCustomerStatusUpdateSMS(
+            booking.customerPhone,
+            newStatus,
+            booking.customerAddress,
+            undefined,
+            booking.customerName,
+            bookingId
+          )
+          console.log(`✅ Sent in-progress SMS to customer for booking ${bookingId}`)
+        } else if (newStatus === 'completed') {
+          // Send SMS to customer
+          await sendCustomerStatusUpdateSMS(
+            booking.customerPhone,
+            newStatus,
+            booking.customerAddress,
+            undefined,
+            booking.customerName,
+            bookingId
+          )
+          console.log(`✅ Sent completion SMS to customer for booking ${bookingId}`)
+        } else if (newStatus === 'in-contractor-pipeline') {
+          // Send needs review SMS to manager
+          const manager = TEAM_MEMBERS.find(t => t.role === 'Service Manager')
+          if (manager) {
+            await sendSMS({
+              recipientPhone: manager.phone,
+              messageBody: `Job ready for review: ${booking.customerName} at ${booking.customerAddress}. Please check the admin portal.`,
+              messageType: 'status_update',
+              bookingId,
+            })
+            console.log(`✅ Sent needs-review SMS to manager for booking ${bookingId}`)
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error sending SMS:', error)
       }
+    }
+  }
+
+  /**
+   * Helper function to send SMS
+   */
+  const sendSMS = async (payload: {
+    recipientPhone: string
+    messageBody: string
+    messageType: string
+    bookingId?: string
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch('/api/sms/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ SMS send error:', data.error)
+        return { success: false, error: data.error }
+      }
+
+      console.log('✅ SMS sent successfully:', data.messageSid)
+      return { success: true }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('❌ Failed to send SMS:', errorMessage)
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -157,7 +233,7 @@ export default function AdminBookings() {
     }
   }
 
-  const handleStatusConfirm = (bookingId: string) => {
+  const handleStatusConfirm = async (bookingId: string) => {
     const currentBooking = bookings.find(b => b.id === bookingId)
     if (!currentBooking) return
 
@@ -171,9 +247,8 @@ export default function AdminBookings() {
       return
     }
 
-    setBookings(bookings.map(b => 
-      b.id === bookingId ? { ...b, status: nextStatus as any } : b
-    ))
+    // Use handleStatusChange to ensure SMS is sent properly
+    await handleStatusChange(bookingId, nextStatus)
     setStatusConfirmDialog(null)
   }
 
@@ -184,7 +259,7 @@ export default function AdminBookings() {
     setStatusConfirmDialog(null)
   }
 
-  const handleCompletionPath = (bookingId: string, path: 'progressed' | 'not_progressed') => {
+  const handleCompletionPath = async (bookingId: string, path: 'progressed' | 'not_progressed') => {
     const newStatus = path === 'progressed' ? 'in-contractor-pipeline' : 'completed-not-in-pipeline'
     
     if (path === 'progressed') {
@@ -192,12 +267,16 @@ export default function AdminBookings() {
       setSelectContractorModal({ bookingId })
       setCompletionPathModal(null)
     } else {
-      // Mark as completed not in pipeline
-      setBookings(bookings.map(b => 
-        b.id === bookingId 
-          ? { ...b, status: newStatus as any, progression_path: path }
-          : b
-      ))
+      // Mark as completed not in pipeline - use handleStatusChange for SMS tracking
+      const booking = bookings.find(b => b.id === bookingId)
+      if (booking) {
+        setBookings(bookings.map(b => 
+          b.id === bookingId 
+            ? { ...b, progression_path: path }
+            : b
+        ))
+        await handleStatusChange(bookingId, newStatus)
+      }
       setCompletionPathModal(null)
     }
   }
@@ -209,24 +288,25 @@ export default function AdminBookings() {
     const booking = bookings.find(b => b.id === bookingId)
     if (!booking) return
 
-    // Update UI first
+    // Update UI first with contractor assignment
     setBookings(bookings.map(b => 
       b.id === bookingId 
         ? { 
             ...b, 
-            status: 'in-contractor-pipeline', 
             progression_path: 'progressed',
             contractor_assigned: contractor.name 
           } 
         : b
     ))
+
+    // Change status to in-contractor-pipeline using handleStatusChange for SMS tracking
+    await handleStatusChange(bookingId, 'in-contractor-pipeline')
     setSelectContractorModal(null)
 
     // Send SMS notification to contractor
     const dashboardLink = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/admin/bookings`
     await sendContractorAssignmentSMS(
       contractor.phone,
-      booking.serviceType,
       booking.customerName,
       booking.customerAddress,
       booking.date,
@@ -240,7 +320,7 @@ export default function AdminBookings() {
   /**
    * Send SMS notification to contractor when assigned to a job
    */
-  const sendContractorAssignmentSMS = async (
+  const sendContractorAssignmentNotification = async (
     bookingId: string,
     contractorId: string,
     booking: Booking
@@ -257,30 +337,18 @@ export default function AdminBookings() {
       const appointmentDate = formatDate(booking.date)
       const appointmentTime = booking.time
 
-      // Get the dashboard link
-      const dashboardLink = `${window.location.origin}/admin/bookings`
+      // Send SMS using the smsHelper
+      const result = await sendContractorAssignmentSMS(
+        contractorData.phone,
+        booking.customerName,
+        booking.customerAddress,
+        appointmentDate,
+        appointmentTime,
+        bookingId
+      )
 
-      // Construct the SMS message
-      const messageBody = `New job assigned: ${booking.serviceType.replace('-', ' ')} for ${booking.customerName} at ${booking.customerAddress} on ${appointmentDate} ${appointmentTime}. Customer: ${booking.customerPhone}. Dashboard: ${dashboardLink}`
-
-      // Call the SMS API
-      const response = await fetch('/api/sms/send-sms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipientPhone: contractorData.phone,
-          messageBody,
-          messageType: 'contractor_assignment',
-          bookingId,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send SMS')
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send SMS')
       }
 
       // SMS sent successfully
@@ -291,7 +359,7 @@ export default function AdminBookings() {
         setSmsState(null)
       }, 3000)
 
-      console.log(`✅ SMS sent to ${contractorData.name}: ${messageBody}`)
+      console.log(`✅ SMS sent to ${contractorData.name}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send SMS'
       console.error(`❌ Error sending SMS: ${errorMessage}`)

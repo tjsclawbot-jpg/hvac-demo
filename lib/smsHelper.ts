@@ -222,28 +222,6 @@ export async function fetchSMSLogsForBooking(bookingId: string): Promise<{ succe
 }
 
 /**
- * Send contractor assignment SMS
- * Message: "You have been assigned job: [Customer Name] at [Address] on [Date] at [Time]"
- */
-export async function sendContractorAssignmentSMS(
-  contractorPhone: string,
-  customerName: string,
-  address: string,
-  date: string,
-  time: string,
-  bookingId?: string
-): Promise<{ success: boolean; error?: string }> {
-  const messageBody = `You have been assigned: ${customerName} at ${address} on ${date} at ${time}. Please confirm receipt.`
-
-  return sendSMS({
-    recipientPhone: contractorPhone,
-    messageBody,
-    messageType: 'contractor_assignment',
-    bookingId,
-  })
-}
-
-/**
  * Handle job status change and send appropriate SMSs
  * Prevents duplicate SMSs by checking sent_statuses array
  */
@@ -433,27 +411,6 @@ export async function sendContractorStatusUpdateSMS(
     console.error('❌ Error sending contractor SMS:', errorMessage)
     return { success: false, error: errorMessage }
   }
-}
-
-/**
- * Send contractor assignment SMS
- */
-export async function sendContractorAssignmentSMS(
-  contractorPhone: string,
-  customerName: string,
-  address: string,
-  date: string,
-  time: string,
-  bookingId?: string
-): Promise<{ success: boolean; error?: string }> {
-  const messageBody = `You have been assigned: ${customerName} at ${address} on ${date} at ${time}. Please confirm receipt.`
-
-  return sendSMS({
-    recipientPhone: contractorPhone,
-    messageBody,
-    messageType: 'contractor_assignment',
-    bookingId,
-  })
 }
 
 export { TEAM_MEMBERS }
