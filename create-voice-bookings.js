@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = 'https://qeoxavbzuxqhbwwlpiss.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlb3hhdmJ6dXhxaGJ3d2xwaXNzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjY0MTU2MiwiZXhwIjoyMDg4MjE3NTYyfQ.uqgf9uzM3trPbXxNv6KDrXWBAjoMkbld-NT7k_p_TPM';
-const ANON_KEY = 'sb_publishable_8hwfQTZ1BwkDqO8nu4kxsg_wozt3oaO';
+const SERVICE_ROLE_KEY = 'sb_secret_h6v7n85vg4ts25VjUrzdTw_oH_b-rt8';
+const ANON_KEY = 'sb_publishable_1TgdF0fNMe8Bopiog21KIQ_pT8JRtXX';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 

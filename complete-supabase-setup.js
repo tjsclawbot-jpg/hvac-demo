@@ -73,7 +73,7 @@ async function main() {
   console.log('After table creation, verify with:');
   console.log('  curl -X GET \\');
   console.log('    "https://qeoxavbzuxqhbwwlpiss.supabase.co/rest/v1/voice_bookings" \\');
-  console.log('    -H "apikey: sb_publishable_8hwfQTZ1BwkDqO8nu4kxsg_wozt3oaO"\n');
+  console.log('    -H "apikey: sb_publishable_1TgdF0fNMe8Bopiog21KIQ_pT8JRtXX"\n');
 }
 
 main().catch(err => {

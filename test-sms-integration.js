@@ -18,7 +18,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Configuration
 const SUPABASE_URL = 'https://qeoxavbzuxqhbwwlpiss.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_8hwfQTZ1BwkDqO8nu4kxsg_wozt3oaO';
+const SUPABASE_ANON_KEY = 'sb_publishable_1TgdF0fNMe8Bopiog21KIQ_pT8JRtXX';
 const API_URL = 'http://localhost:3000';
 
 // Test data
