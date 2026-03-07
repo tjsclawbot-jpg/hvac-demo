@@ -88,35 +88,35 @@ export default function AdminBookings() {
         <div className="w-full max-w-3xl mx-auto">
           {/* Page Header - Mobile First */}
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-2">Booking Management</h1>
-            <p className="text-base text-gray-600">Manage customer web and voice bookings</p>
+            <h1 className="text-4xl sm:text-3xl md:text-4xl font-bold text-hvac-darkgray mb-2">Booking Management</h1>
+            <p className="text-lg sm:text-base text-gray-600">Manage customer web and voice bookings</p>
           </div>
 
           {/* Stats - Simplified for Mobile */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm text-gray-600 mb-2">Total Bookings</p>
-              <p className="text-3xl font-bold text-hvac-darkgray">{totalBookings}</p>
-              <p className="text-xs text-gray-500 mt-2">{bookings.length} web, {voiceBookings.length} voice</p>
+              <p className="text-base sm:text-sm text-gray-600 mb-2 font-semibold">Total Bookings</p>
+              <p className="text-4xl sm:text-3xl font-bold text-hvac-darkgray">{totalBookings}</p>
+              <p className="text-sm sm:text-xs text-gray-500 mt-2">{bookings.length} web, {voiceBookings.length} voice</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm text-gray-600 mb-2">Upcoming</p>
-              <p className="text-3xl font-bold text-hvac-orange">{upcomingCount}</p>
-              <p className="text-xs text-gray-500 mt-2">{webUpcomingCount} web</p>
+              <p className="text-base sm:text-sm text-gray-600 mb-2 font-semibold">Upcoming</p>
+              <p className="text-4xl sm:text-3xl font-bold text-hvac-orange">{upcomingCount}</p>
+              <p className="text-sm sm:text-xs text-gray-500 mt-2">{webUpcomingCount} web</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm text-gray-600 mb-2">Total Deposits</p>
-              <p className="text-3xl font-bold text-green-600">{formatCurrency(totalDeposits)}</p>
+              <p className="text-base sm:text-sm text-gray-600 mb-2 font-semibold">Total Deposits</p>
+              <p className="text-4xl sm:text-3xl font-bold text-green-600">{formatCurrency(totalDeposits)}</p>
             </div>
             <div className="hidden lg:block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm text-gray-600 mb-2">Web Confirmed</p>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-base sm:text-sm text-gray-600 mb-2 font-semibold">Web Confirmed</p>
+              <p className="text-4xl sm:text-3xl font-bold text-blue-600">
                 {bookings.filter(b => b.status === 'confirmed').length}
               </p>
             </div>
             <div className="hidden lg:block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm text-gray-600 mb-2">Voice Confirmed</p>
-              <p className="text-3xl font-bold text-purple-600">
+              <p className="text-base sm:text-sm text-gray-600 mb-2 font-semibold">Voice Confirmed</p>
+              <p className="text-4xl sm:text-3xl font-bold text-purple-600">
                 {voiceBookings.filter(b => b.status === 'confirmed').length}
               </p>
             </div>
@@ -336,12 +336,12 @@ export default function AdminBookings() {
                       >
                         <div className="text-left flex-grow min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-3 py-1 rounded-full text-sm font-bold whitespace-nowrap ${getStatusColor(booking.status)}`}>
+                            <span className={`px-3 py-1 rounded-full text-base sm:text-sm font-bold whitespace-nowrap ${getStatusColor(booking.status)}`}>
                               {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                             </span>
                           </div>
-                          <p className="text-xl font-bold text-hvac-darkgray break-words">{booking.customerName}</p>
-                          <p className="text-base text-hvac-orange font-semibold mt-2">
+                          <p className="text-2xl sm:text-xl font-bold text-hvac-darkgray break-words">{booking.customerName}</p>
+                          <p className="text-lg sm:text-base text-hvac-orange font-semibold mt-2">
                             📅 {formatDate(booking.date)} · {booking.preferredTime}
                           </p>
                         </div>
@@ -356,8 +356,8 @@ export default function AdminBookings() {
                           <div className="border-t-2 border-purple-200 px-6 py-6 space-y-5 bg-gray-50">
                             {/* Service Info */}
                             <div className="bg-white rounded-lg p-4 border border-gray-200">
-                              <p className="text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Service Type</p>
-                              <p className="text-xl font-bold text-hvac-darkgray">
+                              <p className="text-sm sm:text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Service Type</p>
+                              <p className="text-2xl sm:text-xl font-bold text-hvac-darkgray">
                                 {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}
                               </p>
                             </div>
@@ -365,15 +365,15 @@ export default function AdminBookings() {
                             {/* Contact Info */}
                             <div className="grid grid-cols-1 gap-4">
                               <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                <p className="text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Phone Number</p>
-                                <p className="text-lg font-bold text-hvac-darkgray">{booking.customerPhone}</p>
+                                <p className="text-sm sm:text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Phone Number</p>
+                                <p className="text-xl sm:text-lg font-bold text-hvac-darkgray">{booking.customerPhone}</p>
                               </div>
                             </div>
 
                             {/* Address */}
                             <div className="bg-white rounded-lg p-4 border border-gray-200">
-                              <p className="text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Service Address</p>
-                              <p className="text-base text-hvac-darkgray font-medium">{booking.serviceAddress}</p>
+                              <p className="text-sm sm:text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">Service Address</p>
+                              <p className="text-lg sm:text-base text-hvac-darkgray font-medium">{booking.serviceAddress}</p>
                             </div>
 
                             {/* Notes if available */}
