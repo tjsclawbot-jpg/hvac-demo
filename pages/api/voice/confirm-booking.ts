@@ -77,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const smsMessage = `Hi ${customerName}, your ${serviceType} appointment is confirmed for ${preferredTime}. We'll see you at ${serviceAddress}. Reply STOP to opt out.`
         
         const smsResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/sms/send-sms`,
+          `https://hvac-demo-drab.vercel.app/api/sms/send-sms`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
