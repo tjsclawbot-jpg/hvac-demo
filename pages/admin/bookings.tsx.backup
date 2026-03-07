@@ -17,8 +17,10 @@ interface Booking {
   time: string
   depositAmount: number
   depositPaid: boolean
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'no-show' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'in-contractor-pipeline' | 'completed-not-in-pipeline' | 'no-show' | 'cancelled'
   assignedTo?: string
+  contractor_assigned?: string
+  progression_path?: 'progressed' | 'not_progressed'
 }
 
 // Hardcoded team members for colleague assignment
@@ -34,7 +36,9 @@ const statusColorMap = {
   pending: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⏱', buttonText: 'Confirm Job', buttonBg: 'bg-gray-400 hover:bg-gray-500' },
   confirmed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓', buttonText: 'Confirmed', buttonBg: 'bg-green-500 hover:bg-green-600' },
   'in-progress': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', icon: '⚡', buttonText: 'In Progress', buttonBg: 'bg-orange-500 hover:bg-orange-600' },
-  completed: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', icon: '✓✓', buttonText: 'Completed', buttonBg: 'bg-purple-500 cursor-not-allowed opacity-75' },
+  completed: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', icon: '🔍', buttonText: 'Inspected', buttonBg: 'bg-blue-500 cursor-not-allowed opacity-75' },
+  'in-contractor-pipeline': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓✓', buttonText: 'In Pipeline', buttonBg: 'bg-green-500 cursor-not-allowed opacity-75' },
+  'completed-not-in-pipeline': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '✓', buttonText: 'Completed', buttonBg: 'bg-gray-500 cursor-not-allowed opacity-75' },
   'no-show': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', icon: '✗', buttonText: 'No-Show', buttonBg: 'bg-red-500' },
   cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⊘', buttonText: 'Cancelled', buttonBg: 'bg-gray-400' }
 }
@@ -60,13 +64,17 @@ export default function AdminBookings() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [selectedVoiceBooking, setSelectedVoiceBooking] = useState<VoiceBooking | null>(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
-  const [refundAmount, setRefundAmount] = useState(145)
+  const [refundAmount, setRefundAmount] = useState(145) // Default: $150 - $5 fee
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [statusConfirmDialog, setStatusConfirmDialog] = useState<{ bookingId: string; newStatus: string } | null>(null)
   const [assignColleagueModal, setAssignColleagueModal] = useState<{ bookingId: string } | null>(null)
   const [touchStart, setTouchStart] = useState<{ x: number; bookingId: string } | null>(null)
+  const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
+  const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [refundConfirmStep, setRefundConfirmStep] = useState<'first' | 'second' | null>(null)
+  const [refundBookingId, setRefundBookingId] = useState<string | null>(null)
   
   // Helper function to get progress percentage for status
   const getProgressPercentage = (status: string) => {
@@ -107,12 +115,14 @@ export default function AdminBookings() {
   }
 
   const handleInteractiveStatusChange = (bookingId: string, currentStatus: string) => {
+    let nextStatus = currentStatus
+    
     if (currentStatus === 'pending') {
       setStatusConfirmDialog({ bookingId, newStatus: 'confirmed' })
     } else if (currentStatus === 'confirmed') {
-      setStatusConfirmDialog({ bookingId, newStatus: 'confirmed' })
+      setStatusConfirmDialog({ bookingId, newStatus: 'confirmed' }) // Will show unconfirm dialog
     } else if (currentStatus === 'in-progress') {
-      setStatusConfirmDialog({ bookingId, newStatus: 'in-progress' })
+      setStatusConfirmDialog({ bookingId, newStatus: 'in-progress' }) // Will show complete dialog
     }
   }
 
@@ -123,12 +133,52 @@ export default function AdminBookings() {
     let nextStatus = 'pending'
     if (currentBooking.status === 'pending') nextStatus = 'confirmed'
     else if (currentBooking.status === 'confirmed') nextStatus = 'in-progress'
-    else if (currentBooking.status === 'in-progress') nextStatus = 'completed'
+    else if (currentBooking.status === 'in-progress') {
+      // Show two-path completion dialog instead of directly completing
+      setCompletionPathModal({ bookingId })
+      setStatusConfirmDialog(null)
+      return
+    }
 
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: nextStatus as any } : b
     ))
     setStatusConfirmDialog(null)
+  }
+
+  const handleCompletionPath = (bookingId: string, path: 'progressed' | 'not_progressed') => {
+    const newStatus = path === 'progressed' ? 'in-contractor-pipeline' : 'completed-not-in-pipeline'
+    
+    if (path === 'progressed') {
+      // Open contractor selection dialog
+      setSelectContractorModal({ bookingId })
+      setCompletionPathModal(null)
+    } else {
+      // Mark as completed not in pipeline
+      setBookings(bookings.map(b => 
+        b.id === bookingId 
+          ? { ...b, status: newStatus as any, progression_path: path }
+          : b
+      ))
+      setCompletionPathModal(null)
+    }
+  }
+
+  const handleSelectContractor = (bookingId: string, contractorId: string) => {
+    const contractor = TEAM_MEMBERS.find(tm => tm.id === contractorId)
+    if (!contractor) return
+
+    setBookings(bookings.map(b => 
+      b.id === bookingId 
+        ? { 
+            ...b, 
+            status: 'in-contractor-pipeline', 
+            progression_path: 'progressed',
+            contractor_assigned: contractor.name 
+          } 
+        : b
+    ))
+    setSelectContractorModal(null)
   }
 
   const handleStatusUnconfirm = (bookingId: string) => {
@@ -158,6 +208,7 @@ export default function AdminBookings() {
     const endX = e.changedTouches[0].clientX
     const diff = touchStart.x - endX
 
+    // Swipe right (negative) for status progression
     if (diff > 50) {
       const booking = bookings.find(b => b.id === bookingId)
       if (booking && booking.status === 'confirmed') {
@@ -175,6 +226,7 @@ export default function AdminBookings() {
   }
 
   const handleRefund = async (bookingId: string) => {
+    // In a real app, this would call the Stripe refund API
     console.log(`Refunding ${formatCurrency(refundAmount)} for booking ${bookingId}`)
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: 'cancelled' } : b
@@ -183,22 +235,28 @@ export default function AdminBookings() {
     setSelectedBooking(null)
   }
 
-  // Calculate enhanced metrics
-  const webBookings = bookings.length
-  const voiceBookingsCount = voiceBookings.length
-  const totalBookings = webBookings + voiceBookingsCount
-
+  // Calculate stats for both booking types
   const webUpcomingCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length
   const voiceUpcomingCount = voiceBookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length
   const upcomingCount = webUpcomingCount + voiceUpcomingCount
-
+  
+  const totalBookings = bookings.length + voiceBookings.length
   const totalDeposits = bookings.filter(b => b.depositPaid).length * 150
 
+  // Two-path completion metrics
+  const jobsCompletedProgressed = bookings.filter(b => b.progression_path === 'progressed').length
+  const jobsCompletedNotProgressed = bookings.filter(b => b.progression_path === 'not_progressed').length
+  const jobsInContractorPipeline = bookings.filter(b => b.status === 'in-contractor-pipeline').length
+
+  // Enhanced metrics
+  const webBookings = bookings.length
+  const voiceBookingsCount = voiceBookings.length
   const jobsInProgress = bookings.filter(b => b.status === 'in-progress').length + voiceBookings.filter(b => b.status === 'in-progress').length
   const jobsCompleted = bookings.filter(b => b.status === 'completed').length + voiceBookings.filter(b => b.status === 'completed').length
-
+  
   // Contractor pipeline metrics (simulate with 40% of confirmed jobs)
   const jobsInContractorPipeline = Math.ceil(bookings.filter(b => b.status === 'confirmed').length * 0.4)
+  const jobsCompletedNotInPipeline = jobsCompleted
 
   // Status breakdown
   const statusBreakdown = {
@@ -206,6 +264,12 @@ export default function AdminBookings() {
     confirmed: bookings.filter(b => b.status === 'confirmed').length + voiceBookings.filter(b => b.status === 'confirmed').length,
     inProgress: jobsInProgress,
     completed: jobsCompleted
+  }
+
+  // Voice vs Web breakdown
+  const voiceVsWebBreakdown = {
+    web: webBookings,
+    voice: voiceBookingsCount
   }
 
   // Calculate percentages for charts
@@ -227,233 +291,97 @@ export default function AdminBookings() {
       <Header />
 
       <main className="flex-grow w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="w-full max-w-6xl mx-auto">
-          {/* Page Header */}
+        <div className="w-full max-w-5xl mx-auto">
+          {/* Page Header - Modern & Clean */}
           <div className="mb-10 md:mb-12">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-hvac-darkgray mb-3 leading-tight">Booking Management</h1>
-            <p className="text-base md:text-lg text-gray-600 font-medium">Manage your customer bookings from web and voice channels</p>
+            <h1 className="text-5xl md:text-6xl font-bold text-hvac-darkgray mb-3 leading-tight">Booking Management</h1>
+            <p className="text-lg md:text-xl text-gray-600 font-medium">Manage your customer bookings from web and voice channels</p>
           </div>
 
-          {/* Primary Metrics - Large Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {/* Total Bookings */}
-            <div className="lg:col-span-1 bg-gradient-to-br from-hvac-darkgray to-gray-800 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Total Bookings</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{totalBookings}</p>
+          {/* Stats - Modern Grid with Varied Sizes */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {/* Total Bookings - Large Card */}
+            <div className="col-span-2 lg:col-span-2 bg-gradient-to-br from-hvac-darkgray to-gray-800 text-white rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between">
+                <div className="flex-grow">
+                  <p className="text-sm uppercase tracking-wider font-semibold opacity-90">Total Bookings</p>
+                  <p className="text-5xl lg:text-6xl font-bold mt-3">{totalBookings}</p>
+                  <p className="text-sm mt-3 opacity-75">{bookings.length} web • {voiceBookings.length} voice</p>
+                </div>
+                <div className="text-5xl opacity-20">📋</div>
               </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">{webBookings} web • {voiceBookingsCount} voice</p>
             </div>
 
-            {/* Upcoming */}
-            <div className="bg-gradient-to-br from-hvac-orange to-orange-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Upcoming (Pending + Confirmed)</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{upcomingCount}</p>
-              </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
+            {/* Upcoming - Medium Card */}
+            <div className="lg:col-span-1 bg-gradient-to-br from-hvac-orange to-orange-600 text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold opacity-90">Upcoming</p>
+              <p className="text-4xl lg:text-5xl font-bold mt-3">{upcomingCount}</p>
+              <div className="mt-4 h-1 bg-white/30 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${totalBookings > 0 ? (upcomingCount / totalBookings) * 100 : 0}%` }}
+                  className="h-full bg-white rounded-full" 
+                  style={{ width: `${(upcomingCount / totalBookings) * 100}%` }}
                 ></div>
               </div>
             </div>
 
-            {/* Jobs In Progress */}
-            <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Jobs In Progress</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsInProgress}</p>
-              </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${totalBookings > 0 ? (jobsInProgress / totalBookings) * 100 : 0}%` }}
-                ></div>
-              </div>
+            {/* Total Deposits - Medium Card */}
+            <div className="lg:col-span-1 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold opacity-90">Deposits Collected</p>
+              <p className="text-4xl lg:text-5xl font-bold mt-3">{formatCurrency(totalDeposits)}</p>
+              <p className="text-sm mt-4 opacity-75">{bookings.filter(b => b.depositPaid).length} completed</p>
             </div>
 
-            {/* Jobs Completed */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Jobs Completed (Total)</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsCompleted}</p>
-              </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">Web & Voice combined</p>
+            {/* Confirmed Web - Small Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-blue-900">Web Confirmed</p>
+              <p className="text-4xl font-bold text-blue-600 mt-2">{bookings.filter(b => b.status === 'confirmed').length}</p>
+              <div className="text-2xl mt-3">🌐</div>
             </div>
 
-            {/* Contractor Pipeline */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">In Contractor Pipeline</p>
-                <p className="text-5xl md:text-6xl font-bold mt-4 leading-tight">{jobsInContractorPipeline}</p>
-              </div>
-              <div className="mt-4 h-2 bg-white/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white rounded-full transition-all" 
-                  style={{ width: `${contractorPipelineHealth}%` }}
-                ></div>
-              </div>
+            {/* Confirmed Voice - Small Card */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-purple-900">Voice Confirmed</p>
+              <p className="text-4xl font-bold text-purple-600 mt-2">{voiceBookings.filter(b => b.status === 'confirmed').length}</p>
+              <div className="text-2xl mt-3">🎤</div>
             </div>
 
-            {/* Deposits Collected */}
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all min-h-[200px] flex flex-col justify-between">
-              <div>
-                <p className="text-xs md:text-sm uppercase tracking-wider font-semibold opacity-90">Deposits Collected</p>
-                <p className="text-4xl md:text-5xl font-bold mt-4 leading-tight">{formatCurrency(totalDeposits)}</p>
-              </div>
-              <p className="text-xs md:text-sm mt-4 opacity-80">{bookings.filter(b => b.depositPaid).length} paid</p>
-            </div>
-          </div>
-
-          {/* Breakdown Cards - Secondary Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
-            {/* Voice vs Web Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">📊 Voice vs Web Bookings</h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">🌐 Web</p>
-                    <p className="text-xl md:text-2xl font-bold text-blue-600">{webBookings}</p>
-                  </div>
-                  <div className="h-3 bg-blue-100 rounded-full overflow-hidden border border-blue-200">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                      style={{ width: `${webPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">{webPercentage}% of total</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">🎤 Voice</p>
-                    <p className="text-xl md:text-2xl font-bold text-purple-600">{voiceBookingsCount}</p>
-                  </div>
-                  <div className="h-3 bg-purple-100 rounded-full overflow-hidden border border-purple-200">
-                    <div 
-                      className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all"
-                      style={{ width: `${voicePercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">{voicePercentage}% of total</p>
-                </div>
-              </div>
+            {/* Pending - Small Card */}
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-yellow-900">Pending</p>
+              <p className="text-4xl font-bold text-yellow-600 mt-2">{voiceBookings.filter(b => b.status === 'pending').length}</p>
+              <div className="text-2xl mt-3">⏱</div>
             </div>
 
-            {/* Status Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">🎯 Status Breakdown</h3>
-              
-              <div className="space-y-5">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">⏱ Pending</p>
-                    <p className="text-lg md:text-xl font-bold text-yellow-600">{statusBreakdown.pending}</p>
-                  </div>
-                  <div className="h-2.5 bg-yellow-100 rounded-full overflow-hidden border border-yellow-200">
-                    <div 
-                      className="h-full bg-yellow-500 rounded-full transition-all"
-                      style={{ width: `${pendingPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{pendingPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">✓ Confirmed</p>
-                    <p className="text-lg md:text-xl font-bold text-green-600">{statusBreakdown.confirmed}</p>
-                  </div>
-                  <div className="h-2.5 bg-green-100 rounded-full overflow-hidden border border-green-200">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ width: `${confirmedPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{confirmedPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">⚡ In Progress</p>
-                    <p className="text-lg md:text-xl font-bold text-orange-600">{statusBreakdown.inProgress}</p>
-                  </div>
-                  <div className="h-2.5 bg-orange-100 rounded-full overflow-hidden border border-orange-200">
-                    <div 
-                      className="h-full bg-orange-500 rounded-full transition-all"
-                      style={{ width: `${inProgressPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{inProgressPercentage}%</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm md:text-base font-semibold text-gray-700">✓✓ Completed</p>
-                    <p className="text-lg md:text-xl font-bold text-emerald-600">{statusBreakdown.completed}</p>
-                  </div>
-                  <div className="h-2.5 bg-emerald-100 rounded-full overflow-hidden border border-emerald-200">
-                    <div 
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{ width: `${completedPercentage}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{completedPercentage}%</p>
-                </div>
-              </div>
+            {/* Completed - Small Card */}
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900">Completed</p>
+              <p className="text-4xl font-bold text-emerald-600 mt-2">{voiceBookings.filter(b => b.status === 'completed').length}</p>
+              <div className="text-2xl mt-3">✓</div>
             </div>
 
-            {/* Contractor Pipeline Health */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
-              <h3 className="text-lg md:text-xl font-bold text-hvac-darkgray mb-6">🔧 Pipeline Health</h3>
-              
-              <div className="space-y-6">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border-2 border-blue-300">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm md:text-base font-semibold text-blue-900">Overall Health</p>
-                    <p className="text-3xl md:text-4xl font-bold text-blue-600">{contractorPipelineHealth}%</p>
-                  </div>
-                  <div className="h-4 bg-white rounded-full overflow-hidden border-2 border-blue-300">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                      style={{ width: `${contractorPipelineHealth}%` }}
-                    ></div>
-                  </div>
-                </div>
+            {/* Jobs Completed & Progressed - New Card */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-green-900">Completed & Progressed</p>
+              <p className="text-4xl font-bold text-green-700 mt-2">{jobsCompletedProgressed}</p>
+              <div className="text-2xl mt-3">✓✓</div>
+            </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">📦</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">In Pipeline</p>
-                      <p className="text-2xl md:text-3xl font-bold text-blue-600">{jobsInContractorPipeline}</p>
-                    </div>
-                  </div>
+            {/* Jobs Completed & Not Progressed - New Card */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-900">Completed & Not Progressed</p>
+              <p className="text-4xl font-bold text-gray-700 mt-2">{jobsCompletedNotProgressed}</p>
+              <div className="text-2xl mt-3">✓</div>
+            </div>
 
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">✓</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">Completed</p>
-                      <p className="text-2xl md:text-3xl font-bold text-green-600">{jobsCompleted}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">⚠️</span>
-                    <div className="flex-grow">
-                      <p className="text-xs md:text-sm text-gray-600">Status</p>
-                      <p className="text-lg md:text-xl font-bold text-gray-700">{contractorPipelineHealth > 50 ? '✓ Healthy' : '⚠️ Needs Attention'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Jobs in Contractor Pipeline - New Card */}
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-indigo-900">In Contractor Pipeline</p>
+              <p className="text-4xl font-bold text-indigo-700 mt-2">{jobsInContractorPipeline}</p>
+              <div className="text-2xl mt-3">🚀</div>
             </div>
           </div>
 
-          {/* Controls */}
+          {/* Controls - Modern & Mobile First */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-7 mb-10 shadow-sm">
             {/* Booking Type Selector */}
             <div className="mb-7 pb-7 border-b border-gray-200">
@@ -461,7 +389,7 @@ export default function AdminBookings() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setBookingType('web')}
-                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation ${
                     bookingType === 'web'
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-150 active:bg-gray-200'
@@ -471,7 +399,7 @@ export default function AdminBookings() {
                 </button>
                 <button
                   onClick={() => setBookingType('voice')}
-                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                  className={`px-4 py-3.5 md:py-4 rounded-xl font-bold text-base transition-all touch-manipulation ${
                     bookingType === 'voice'
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md hover:shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-150 active:bg-gray-200'
@@ -482,14 +410,14 @@ export default function AdminBookings() {
               </div>
             </div>
 
-            {/* View Type Selector */}
+            {/* View Type Selector (only for web bookings) */}
             {bookingType === 'web' && (
               <div className="mb-7 pb-7 border-b border-gray-200">
                 <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">View Mode</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setViewType('list')}
-                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation ${
                       viewType === 'list'
                         ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
                         : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-150 active:bg-gray-200'
@@ -499,7 +427,7 @@ export default function AdminBookings() {
                   </button>
                   <button
                     onClick={() => setViewType('calendar')}
-                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                    className={`px-4 py-3.5 rounded-xl font-bold text-base transition-all touch-manipulation ${
                       viewType === 'calendar'
                         ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
                         : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-150 active:bg-gray-200'
@@ -517,7 +445,7 @@ export default function AdminBookings() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-hvac-orange focus:border-hvac-orange bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
+                className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-hvac-orange focus:border-hvac-orange bg-white hover:border-gray-400 transition-colors cursor-pointer"
               >
                 <option value="all">📊 All Status</option>
                 <option value="pending">⏱ Pending</option>
@@ -527,12 +455,12 @@ export default function AdminBookings() {
                 <option value="cancelled">⊘ Cancelled</option>
               </select>
 
-              {/* Sort Order */}
+              {/* Sort Order (for voice bookings) */}
               {bookingType === 'voice' && (
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-                  className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
+                  className="w-full px-4 py-3 text-base font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer"
                 >
                   <option value="newest">📅 Newest First</option>
                   <option value="oldest">📅 Oldest First</option>
@@ -541,7 +469,7 @@ export default function AdminBookings() {
             </div>
           </div>
 
-          {/* Web Bookings List View */}
+          {/* Web Bookings List View - Modern Design */}
           {bookingType === 'web' && viewType === 'list' && (
             <div className="space-y-4">
               {filteredBookings.map(booking => {
@@ -551,24 +479,36 @@ export default function AdminBookings() {
                 return (
                   <div
                     key={booking.id}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
+                    className={`rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden ${
+                      booking.progression_path === 'progressed'
+                        ? 'bg-green-50 border-green-300'
+                        : booking.progression_path === 'not_progressed'
+                        ? 'bg-gray-50 border-gray-300'
+                        : 'bg-white border-gray-200'
+                    }`}
                   >
                     {/* Card Header */}
                     <button
                       onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                      className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation min-h-[60px]"
+                      className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:opacity-85 transition-colors touch-manipulation"
                     >
                       <div className="flex-grow min-w-0">
-                        {/* Status Badge */}
-                        <div className="flex items-center gap-2 mb-2">
+                        {/* Status & Contractor Badges */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2`}>
                             <span>{statusConfig.icon}</span>
-                            <span>{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                            <span>{booking.status.replace('-', ' ').charAt(0).toUpperCase() + booking.status.slice(1).replace('-', ' ')}</span>
                           </span>
+                          {booking.contractor_assigned && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border bg-indigo-100 text-indigo-700 border-indigo-300 border-2">
+                              <span>👤</span>
+                              <span>{booking.contractor_assigned}</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Customer Name */}
-                        <h3 className="text-xl md:text-2xl font-bold text-hvac-darkgray mb-1 break-words">
+                        <h3 className="text-2xl md:text-3xl font-bold text-hvac-darkgray mb-1 break-words">
                           {booking.customerName}
                         </h3>
 
@@ -624,7 +564,7 @@ export default function AdminBookings() {
                           <select
                             value={booking.status}
                             onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                            className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
+                            className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 bg-white hover:border-gray-400 transition-colors cursor-pointer"
                           >
                             <option value="pending">⏱ Mark as Pending</option>
                             <option value="confirmed">✓ Mark as Confirmed</option>
@@ -634,21 +574,64 @@ export default function AdminBookings() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button
-                              onClick={() => {
-                                setSelectedBooking(booking)
-                                setRefundAmount(145)
-                                setRefundModalOpen(true)
-                              }}
-                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-red-50 border-2 border-red-300 text-red-700 rounded-xl hover:bg-red-100 active:bg-red-200 transition-all min-h-[44px]"
-                            >
-                              💰 Process Refund
-                            </button>
-
-                            <button
-                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all min-h-[44px]"
+                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all"
                             >
                               📄 Full Details
                             </button>
+
+                            {/* Overflow Menu Button */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all touch-manipulation"
+                              >
+                                ⋯ More
+                              </button>
+
+                              {/* Dropdown Menu */}
+                              {openMenuId === booking.id && (
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuId(null)
+                                    }}
+                                    className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                  >
+                                    📝 View Notes
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setAssignColleagueModal({ bookingId: booking.id })
+                                      setOpenMenuId(null)
+                                    }}
+                                    className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                  >
+                                    👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                        setSelectedBooking(booking)
+                                        setRefundAmount(145)
+                                        setRefundConfirmStep('first')
+                                        setRefundBookingId(booking.id)
+                                      }
+                                      setOpenMenuId(null)
+                                    }}
+                                    className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                      booking.status === 'completed' || booking.status === 'cancelled'
+                                        ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                        : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                    }`}
+                                    disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                  >
+                                    💰 More Actions → Refund
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </>
@@ -667,7 +650,7 @@ export default function AdminBookings() {
             </div>
           )}
 
-          {/* Voice Bookings List View */}
+          {/* Voice Bookings List View - MODERN & MOBILE FIRST */}
           {bookingType === 'voice' && (
             <div>
               <div className="space-y-4">
@@ -682,10 +665,10 @@ export default function AdminBookings() {
                         key={booking.id}
                         className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
                       >
-                        {/* Card Header */}
+                        {/* Card Header - Always Visible */}
                         <button
                           onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                          className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation min-h-[60px]"
+                          className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation"
                         >
                           <div className="flex-grow min-w-0">
                             {/* Status Badge */}
@@ -696,8 +679,8 @@ export default function AdminBookings() {
                               </span>
                             </div>
 
-                            {/* Customer Name */}
-                            <h3 className="text-xl md:text-2xl font-bold text-hvac-darkgray mb-2 break-words leading-tight">
+                            {/* Customer Name - Large & Scannable */}
+                            <h3 className="text-2xl md:text-3xl font-bold text-hvac-darkgray mb-2 break-words leading-tight">
                               {booking.customerName}
                             </h3>
 
@@ -719,15 +702,15 @@ export default function AdminBookings() {
                           </div>
                         </button>
 
-                        {/* Expandable Details */}
+                        {/* Expandable Details Section */}
                         {isExpanded && (
                           <>
                             <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-5 bg-gray-50">
-                              {/* Contact Information */}
+                              {/* Contact Information - Two Column */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Phone</p>
-                                  <p className="text-lg md:text-xl font-bold text-hvac-darkgray font-mono break-all">{booking.customerPhone}</p>
+                                  <p className="text-lg md:text-xl font-bold text-hvac-darkgray font-mono">{booking.customerPhone}</p>
                                 </div>
 
                                 <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -774,7 +757,7 @@ export default function AdminBookings() {
                               <select
                                 value={booking.status}
                                 onChange={(e) => handleVoiceBookingStatusChange(booking.id, e.target.value)}
-                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
+                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer"
                               >
                                 <option value="pending">⏱ Mark as Pending</option>
                                 <option value="confirmed">✓ Mark as Confirmed</option>
@@ -784,16 +767,72 @@ export default function AdminBookings() {
                               </select>
 
                               <button
-                                className="w-full px-4 py-4 md:py-4 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md min-h-[44px]"
+                                className="w-full px-4 py-4 md:py-4 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md"
                               >
                                 📞 Call Customer
                               </button>
 
-                              <button
-                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all min-h-[44px]"
-                              >
-                                📄 View Full Details
-                              </button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <button
+                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all"
+                                >
+                                  📄 View Full Details
+                                </button>
+
+                                {/* Overflow Menu Button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                    className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all touch-manipulation"
+                                  >
+                                    ⋯ More
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {openMenuId === booking.id && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                      <button
+                                        onClick={() => {
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                      >
+                                        📝 View Notes
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setAssignColleagueModal({ bookingId: booking.id })
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                      >
+                                        👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                            setSelectedBooking(booking)
+                                            setRefundAmount(145)
+                                            setRefundConfirmStep('first')
+                                            setRefundBookingId(booking.id)
+                                          }
+                                          setOpenMenuId(null)
+                                        }}
+                                        className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                          booking.status === 'completed' || booking.status === 'cancelled'
+                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                        }`}
+                                        disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                      >
+                                        💰 More Actions → Refund
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </>
                         )}
@@ -811,7 +850,7 @@ export default function AdminBookings() {
             </div>
           )}
 
-          {/* Web Bookings Calendar View */}
+          {/* Web Bookings Calendar View - Enhanced with Day View */}
           {bookingType === 'web' && viewType === 'calendar' && (
             <div className="space-y-6">
               {/* Calendar Section */}
@@ -829,7 +868,7 @@ export default function AdminBookings() {
                   
                   {/* Calendar days */}
                   {[...Array(35)].map((_, idx) => {
-                    const date = new Date(2026, 2, idx - 9)
+                    const date = new Date(2026, 2, idx - 9) // March 2026
                     const dateStr = date.toISOString().split('T')[0]
                     const dayBookings = bookings.filter(b => b.date === dateStr)
                     const isCurrentDay = idx >= 9 && idx < 31
@@ -843,7 +882,7 @@ export default function AdminBookings() {
                       <button
                         key={idx}
                         onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                        className={`aspect-square p-2 rounded-lg border-2 transition-all flex flex-col items-center justify-center text-sm font-bold touch-manipulation min-h-[44px] ${
+                        className={`aspect-square p-2 rounded-lg border-2 transition-all flex flex-col items-center justify-center text-sm font-bold touch-manipulation ${
                           isSelected
                             ? 'border-hvac-orange bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-lg'
                             : dayBookings.length > 0
@@ -863,7 +902,7 @@ export default function AdminBookings() {
                 </div>
               </div>
 
-              {/* Day View Section */}
+              {/* Day View Section - Shows appointments for selected date */}
               {selectedDate && (
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-300 p-6 md:p-8 shadow-md">
                   <div className="mb-8">
@@ -915,7 +954,7 @@ export default function AdminBookings() {
                               </div>
                               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                 <p className="text-xs text-gray-600 font-semibold">📞 Phone</p>
-                                <p className="font-bold text-gray-800 font-mono break-all">{booking.customerPhone}</p>
+                                <p className="font-bold text-gray-800 font-mono">{booking.customerPhone}</p>
                               </div>
                               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                 <p className="text-xs text-gray-600 font-semibold">Deposit</p>
@@ -964,7 +1003,7 @@ export default function AdminBookings() {
                                 <div className="flex gap-3">
                                   <button
                                     onClick={() => handleInteractiveStatusChange(booking.id, booking.status)}
-                                    className={`flex-1 px-4 py-4 md:py-5 rounded-xl font-bold text-lg text-white transition-all shadow-md hover:shadow-lg active:shadow-sm touch-manipulation min-h-[44px] ${statusConfig.buttonBg}`}
+                                    className={`flex-1 px-4 py-4 md:py-5 rounded-xl font-bold text-lg text-white transition-all shadow-md hover:shadow-lg active:shadow-sm touch-manipulation ${statusConfig.buttonBg}`}
                                   >
                                     {booking.status === 'pending' && '✓ Confirm Job'}
                                     {booking.status === 'confirmed' && '➜ Swipe → for Progress'}
@@ -976,19 +1015,70 @@ export default function AdminBookings() {
                               {/* Assign Colleague Button */}
                               <button
                                 onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
-                                className="w-full px-4 py-3 md:py-4 bg-purple-100 hover:bg-purple-200 active:bg-purple-300 text-purple-700 rounded-xl font-bold transition-all border-2 border-purple-300 touch-manipulation min-h-[44px]"
+                                className="w-full px-4 py-3 md:py-4 bg-purple-100 hover:bg-purple-200 active:bg-purple-300 text-purple-700 rounded-xl font-bold transition-all border-2 border-purple-300 touch-manipulation"
                               >
                                 👤 Assign to Colleague
                               </button>
 
-                              {/* Edit & Details Buttons */}
+                              {/* Edit & Details Buttons with Overflow Menu */}
                               <div className="grid grid-cols-2 gap-3">
-                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation min-h-[44px]">
+                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation">
                                   📄 Full Details
                                 </button>
-                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation min-h-[44px]">
-                                  ✏️ Edit
-                                </button>
+                                
+                                {/* Overflow Menu Button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                    className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation"
+                                  >
+                                    ⋯ More
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {openMenuId === booking.id && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                      <button
+                                        onClick={() => {
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                      >
+                                        📝 View Notes
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setAssignColleagueModal({ bookingId: booking.id })
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                      >
+                                        👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                            setSelectedBooking(booking)
+                                            setRefundAmount(145)
+                                            setRefundConfirmStep('first')
+                                            setRefundBookingId(booking.id)
+                                          }
+                                          setOpenMenuId(null)
+                                        }}
+                                        className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                          booking.status === 'completed' || booking.status === 'cancelled'
+                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                        }`}
+                                        disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                      >
+                                        💰 More Actions → Refund
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1062,24 +1152,23 @@ export default function AdminBookings() {
               <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => setStatusConfirmDialog(null)}
-                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleStatusConfirm(statusConfirmDialog.bookingId)}
-                  className="w-full px-4 py-4 bg-gradient-to-r from-hvac-orange to-orange-600 text-white rounded-xl font-bold text-base hover:from-orange-600 hover:to-orange-700 active:from-orange-700 active:to-orange-800 transition-all shadow-md hover:shadow-lg touch-manipulation min-h-[44px]"
+                  className="w-full px-4 py-4 bg-gradient-to-r from-hvac-orange to-orange-600 text-white rounded-xl font-bold text-base hover:from-orange-600 hover:to-orange-700 active:from-orange-700 active:to-orange-800 transition-all shadow-md hover:shadow-lg touch-manipulation"
                 >
                   ✓ Confirm
                 </button>
-
                 {(() => {
                   const booking = bookings.find(b => b.id === statusConfirmDialog.bookingId)
                   if (booking?.status === 'confirmed') {
                     return (
                       <button
                         onClick={() => handleStatusUnconfirm(statusConfirmDialog.bookingId)}
-                        className="w-full px-4 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-base hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 transition-all shadow-md hover:shadow-lg touch-manipulation min-h-[44px]"
+                        className="w-full px-4 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-base hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 transition-all shadow-md hover:shadow-lg touch-manipulation"
                       >
                         ✗ Unconfirm
                       </button>
@@ -1105,7 +1194,7 @@ export default function AdminBookings() {
                   <button
                     key={colleague.id}
                     onClick={() => handleAssignColleague(assignColleagueModal.bookingId, colleague.id)}
-                    className="w-full p-4 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 active:from-purple-200 active:to-purple-300 rounded-xl border-2 border-purple-300 transition-all text-left touch-manipulation min-h-[56px]"
+                    className="w-full p-4 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 active:from-purple-200 active:to-purple-300 rounded-xl border-2 border-purple-300 transition-all text-left touch-manipulation"
                   >
                     <p className="text-lg font-bold text-purple-900">{colleague.name}</p>
                     <p className="text-sm text-purple-700">{colleague.role}</p>
@@ -1115,7 +1204,7 @@ export default function AdminBookings() {
 
               <button
                 onClick={() => setAssignColleagueModal(null)}
-                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
+                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
               >
                 Cancel
               </button>
@@ -1124,7 +1213,7 @@ export default function AdminBookings() {
         </div>
       )}
 
-      {/* Refund Modal */}
+      {/* Refund Modal - Modern & Accessible */}
       {refundModalOpen && selectedBooking && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl">
@@ -1155,7 +1244,7 @@ export default function AdminBookings() {
                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-700 mb-4">Select Refund Amount</p>
                   <div className="space-y-3">
                     {/* Option 1: With Fee */}
-                    <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation min-h-[56px] ${
+                    <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation ${
                       refundAmount === 145
                         ? 'border-hvac-orange bg-orange-50'
                         : 'border-gray-300 bg-white hover:border-hvac-orange'
@@ -1173,7 +1262,7 @@ export default function AdminBookings() {
                     </label>
 
                     {/* Option 2: Full Refund */}
-                    <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation min-h-[56px] ${
+                    <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation ${
                       refundAmount === 150
                         ? 'border-green-600 bg-green-50'
                         : 'border-gray-300 bg-white hover:border-green-600'
@@ -1197,13 +1286,13 @@ export default function AdminBookings() {
               <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => setRefundModalOpen(false)}
-                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleRefund(selectedBooking.id)}
-                  className="w-full px-4 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold text-base hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 transition-all shadow-md hover:shadow-lg touch-manipulation min-h-[44px]"
+                  className="w-full px-4 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold text-base hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 transition-all shadow-md hover:shadow-lg"
                 >
                   💰 Process Refund {formatCurrency(refundAmount)}
                 </button>

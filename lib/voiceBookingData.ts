@@ -3,14 +3,19 @@ export interface VoiceBooking {
   id: string
   customerName: string
   customerPhone: string
+  customerEmail?: string
   serviceAddress: string
   serviceType: string
   preferredTime: string
   date: string
   callSid: string
   timestamp: string
-  status: 'pending' | 'confirmed' | 'completed' | 'no-show' | 'cancelled'
+  notes?: string
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'in-contractor-pipeline' | 'completed-not-in-pipeline' | 'no-show' | 'cancelled'
   source: 'voice' // To distinguish from web bookings
+  assignedTo?: string
+  contractor_assigned?: string
+  progression_path?: 'progressed' | 'not_progressed'
 }
 
 // Sample voice booking data (for demo - in production, fetch from Supabase)
