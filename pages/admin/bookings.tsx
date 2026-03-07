@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
@@ -17,16 +17,26 @@ interface Booking {
   time: string
   depositAmount: number
   depositPaid: boolean
-  status: 'pending' | 'confirmed' | 'completed' | 'no-show' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'no-show' | 'cancelled'
+  assignedTo?: string
 }
+
+// Hardcoded team members for colleague assignment
+const TEAM_MEMBERS = [
+  { id: 'tm1', name: 'John Smith', role: 'Lead Technician' },
+  { id: 'tm2', name: 'Sarah Johnson', role: 'Technician' },
+  { id: 'tm3', name: 'Mike Davis', role: 'Technician' },
+  { id: 'tm4', name: 'Lisa Chen', role: 'Service Manager' }
+]
 
 // Status badge color map
 const statusColorMap = {
-  confirmed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓' },
-  pending: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', icon: '⏱' },
-  completed: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', icon: '✓✓' },
-  'no-show': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', icon: '✗' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⊘' }
+  pending: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⏱', buttonText: 'Confirm Job', buttonBg: 'bg-gray-400 hover:bg-gray-500' },
+  confirmed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓', buttonText: 'Confirmed', buttonBg: 'bg-green-500 hover:bg-green-600' },
+  'in-progress': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', icon: '⚡', buttonText: 'In Progress', buttonBg: 'bg-orange-500 hover:bg-orange-600' },
+  completed: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', icon: '✓✓', buttonText: 'Completed', buttonBg: 'bg-purple-500 cursor-not-allowed opacity-75' },
+  'no-show': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', icon: '✗', buttonText: 'No-Show', buttonBg: 'bg-red-500' },
+  cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⊘', buttonText: 'Cancelled', buttonBg: 'bg-gray-400' }
 }
 
 // Service type icons
@@ -52,6 +62,16 @@ export default function AdminBookings() {
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [refundAmount, setRefundAmount] = useState(145) // Default: $150 - $5 fee
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [statusConfirmDialog, setStatusConfirmDialog] = useState<{ bookingId: string; newStatus: string } | null>(null)
+  const [assignColleagueModal, setAssignColleagueModal] = useState<{ bookingId: string } | null>(null)
+  const [touchStart, setTouchStart] = useState<{ x: number; bookingId: string } | null>(null)
+  
+  // Helper function to get progress percentage for status
+  const getProgressPercentage = (status: string) => {
+    const progression = { pending: 25, confirmed: 50, 'in-progress': 75, completed: 100 }
+    return progression[status as keyof typeof progression] || 0
+  }
 
   // Filter bookings based on type and status
   const filteredBookings = filterStatus === 'all' 
@@ -70,10 +90,84 @@ export default function AdminBookings() {
     return sortOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
   })
 
+  // Get bookings for selected date in calendar view
+  const dayViewBookings = selectedDate 
+    ? bookings.filter(b => b.date === selectedDate).sort((a, b) => {
+        const timeA = new Date(`2000-01-01T${a.time}`).getTime()
+        const timeB = new Date(`2000-01-01T${b.time}`).getTime()
+        return timeA - timeB
+      })
+    : []
+
   const handleStatusChange = (bookingId: string, newStatus: string) => {
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: newStatus as any } : b
     ))
+  }
+
+  const handleInteractiveStatusChange = (bookingId: string, currentStatus: string) => {
+    let nextStatus = currentStatus
+    
+    if (currentStatus === 'pending') {
+      setStatusConfirmDialog({ bookingId, newStatus: 'confirmed' })
+    } else if (currentStatus === 'confirmed') {
+      setStatusConfirmDialog({ bookingId, newStatus: 'confirmed' }) // Will show unconfirm dialog
+    } else if (currentStatus === 'in-progress') {
+      setStatusConfirmDialog({ bookingId, newStatus: 'in-progress' }) // Will show complete dialog
+    }
+  }
+
+  const handleStatusConfirm = (bookingId: string) => {
+    const currentBooking = bookings.find(b => b.id === bookingId)
+    if (!currentBooking) return
+
+    let nextStatus = 'pending'
+    if (currentBooking.status === 'pending') nextStatus = 'confirmed'
+    else if (currentBooking.status === 'confirmed') nextStatus = 'in-progress'
+    else if (currentBooking.status === 'in-progress') nextStatus = 'completed'
+
+    setBookings(bookings.map(b => 
+      b.id === bookingId ? { ...b, status: nextStatus as any } : b
+    ))
+    setStatusConfirmDialog(null)
+  }
+
+  const handleStatusUnconfirm = (bookingId: string) => {
+    setBookings(bookings.map(b => 
+      b.id === bookingId ? { ...b, status: 'pending' } : b
+    ))
+    setStatusConfirmDialog(null)
+  }
+
+  const handleAssignColleague = (bookingId: string, colleagueId: string) => {
+    const colleague = TEAM_MEMBERS.find(tm => tm.id === colleagueId)
+    if (!colleague) return
+
+    setBookings(bookings.map(b => 
+      b.id === bookingId ? { ...b, assignedTo: colleague.name } : b
+    ))
+    setAssignColleagueModal(null)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent, bookingId: string) => {
+    setTouchStart({ x: e.touches[0].clientX, bookingId })
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, bookingId: string) => {
+    if (!touchStart || touchStart.bookingId !== bookingId) return
+
+    const endX = e.changedTouches[0].clientX
+    const diff = touchStart.x - endX
+
+    // Swipe right (negative) for status progression
+    if (diff > 50) {
+      const booking = bookings.find(b => b.id === bookingId)
+      if (booking && booking.status === 'confirmed') {
+        handleStatusChange(bookingId, 'in-progress')
+      }
+    }
+
+    setTouchStart(null)
   }
 
   const handleVoiceBookingStatusChange = (bookingId: string, newStatus: string) => {
@@ -534,52 +628,317 @@ export default function AdminBookings() {
             </div>
           )}
 
-          {/* Web Bookings Calendar View - Modern Design */}
+          {/* Web Bookings Calendar View - Enhanced with Day View */}
           {bookingType === 'web' && viewType === 'calendar' && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-3 mb-6">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center font-bold text-sm md:text-base text-gray-700 py-3 uppercase tracking-wide">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-2 md:gap-3">
-                {[...Array(35)].map((_, idx) => {
-                  const date = new Date(2026, 2, idx - 9) // March 2026
-                  const dateStr = date.toISOString().split('T')[0]
-                  const dayBookings = bookings.filter(b => b.date === dateStr)
-                  const isCurrentDay = idx >= 9 && idx < 31
-
-                  if (!isCurrentDay) {
-                    return <div key={idx} className="aspect-square" />
-                  }
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`aspect-square p-2 md:p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center cursor-pointer hover:shadow-md ${
-                        dayBookings.length > 0
-                          ? 'border-hvac-orange bg-gradient-to-br from-orange-50 to-orange-100 font-bold'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-base md:text-lg font-bold text-hvac-darkgray">{date.getDate()}</div>
-                      {dayBookings.length > 0 && (
-                        <div className="text-xs md:text-sm font-bold text-hvac-orange mt-1 bg-white px-2 py-0.5 rounded-full">
-                          {dayBookings.length} {dayBookings.length === 1 ? 'booking' : 'bookings'}
-                        </div>
-                      )}
+            <div className="space-y-6">
+              {/* Calendar Section */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
+                <h2 className="text-2xl md:text-3xl font-bold text-hvac-darkgray mb-6">Select a Date</h2>
+                
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-2 md:gap-3">
+                  {/* Day headers */}
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="text-center font-bold text-xs md:text-sm text-gray-600 py-3 uppercase tracking-wide">
+                      {day.charAt(0)}
                     </div>
-                  )
-                })}
+                  ))}
+                  
+                  {/* Calendar days */}
+                  {[...Array(35)].map((_, idx) => {
+                    const date = new Date(2026, 2, idx - 9) // March 2026
+                    const dateStr = date.toISOString().split('T')[0]
+                    const dayBookings = bookings.filter(b => b.date === dateStr)
+                    const isCurrentDay = idx >= 9 && idx < 31
+                    const isSelected = selectedDate === dateStr
+
+                    if (!isCurrentDay) {
+                      return <div key={idx} className="aspect-square" />
+                    }
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                        className={`aspect-square p-2 rounded-lg border-2 transition-all flex flex-col items-center justify-center text-sm font-bold touch-manipulation ${
+                          isSelected
+                            ? 'border-hvac-orange bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-lg'
+                            : dayBookings.length > 0
+                            ? 'border-hvac-orange bg-gradient-to-br from-orange-50 to-orange-100 text-hvac-darkgray hover:shadow-md'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div>{date.getDate()}</div>
+                        {dayBookings.length > 0 && (
+                          <div className={`text-xs mt-0.5 font-bold ${isSelected ? 'text-orange-100' : 'text-hvac-orange'}`}>
+                            {dayBookings.length}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
+
+              {/* Day View Section - Shows appointments for selected date */}
+              {selectedDate && (
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-300 p-6 md:p-8 shadow-md">
+                  <div className="mb-8">
+                    <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-2">
+                      📅 {formatDate(selectedDate)}
+                    </h2>
+                    <p className="text-lg text-gray-700">
+                      {dayViewBookings.length} appointment{dayViewBookings.length !== 1 ? 's' : ''} scheduled
+                    </p>
+                  </div>
+
+                  {dayViewBookings.length > 0 ? (
+                    <div className="space-y-4">
+                      {dayViewBookings.map(booking => {
+                        const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
+                        const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
+                        
+                        return (
+                          <div
+                            key={booking.id}
+                            onTouchStart={(e) => handleTouchStart(e, booking.id)}
+                            onTouchEnd={(e) => handleTouchEnd(e, booking.id)}
+                            className="bg-white rounded-2xl border-2 border-gray-300 p-5 md:p-6 shadow-sm hover:shadow-md transition-all"
+                          >
+                            {/* Appointment Header */}
+                            <div className="flex items-start justify-between gap-4 mb-4">
+                              <div className="flex-grow">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="text-3xl">{serviceIcon}</span>
+                                  <div>
+                                    <p className="text-sm text-gray-600">⏰ {booking.time}</p>
+                                    <p className="text-2xl md:text-3xl font-bold text-hvac-darkgray">
+                                      {booking.customerName}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2 whitespace-nowrap`}>
+                                <span>{statusConfig.icon}</span>
+                                <span>{booking.status.replace('-', ' ').toUpperCase()}</span>
+                              </span>
+                            </div>
+
+                            {/* Service Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-sm md:text-base">
+                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <p className="text-xs text-gray-600 font-semibold">Service Type</p>
+                                <p className="font-bold text-gray-800">{booking.serviceType.replace('-', ' ')}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <p className="text-xs text-gray-600 font-semibold">📞 Phone</p>
+                                <p className="font-bold text-gray-800 font-mono">{booking.customerPhone}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <p className="text-xs text-gray-600 font-semibold">Deposit</p>
+                                <p className="font-bold text-green-600">{formatCurrency(booking.depositAmount)}</p>
+                              </div>
+                            </div>
+
+                            {/* Address */}
+                            <div className="bg-blue-50 rounded-lg p-3 mb-4 border border-blue-200">
+                              <p className="text-xs text-blue-700 font-semibold">📍 Address</p>
+                              <p className="text-blue-900 font-medium">{booking.customerAddress}</p>
+                            </div>
+
+                            {/* Progress Indicator */}
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-gray-700 uppercase">Progress</p>
+                                <p className="text-sm font-bold text-gray-700">{getProgressPercentage(booking.status)}%</p>
+                              </div>
+                              <div className="h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-hvac-orange to-orange-500 rounded-full transition-all duration-300"
+                                  style={{ width: `${getProgressPercentage(booking.status)}%` }}
+                                ></div>
+                              </div>
+                              <div className="flex justify-between mt-2 text-xs text-gray-600 font-semibold">
+                                <span>Pending</span>
+                                <span>Confirmed</span>
+                                <span>In Progress</span>
+                                <span>Complete</span>
+                              </div>
+                            </div>
+
+                            {/* Assigned To */}
+                            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                              <p className="text-xs text-purple-700 font-semibold mb-1">👤 Assigned To</p>
+                              <p className="text-purple-900 font-bold">
+                                {booking.assignedTo || 'Unassigned'}
+                              </p>
+                            </div>
+
+                            {/* Interactive Status Button & Actions */}
+                            <div className="space-y-3">
+                              {/* Interactive Status Button */}
+                              {booking.status !== 'completed' && (
+                                <div className="flex gap-3">
+                                  <button
+                                    onClick={() => handleInteractiveStatusChange(booking.id, booking.status)}
+                                    className={`flex-1 px-4 py-4 md:py-5 rounded-xl font-bold text-lg text-white transition-all shadow-md hover:shadow-lg active:shadow-sm touch-manipulation ${statusConfig.buttonBg}`}
+                                  >
+                                    {booking.status === 'pending' && '✓ Confirm Job'}
+                                    {booking.status === 'confirmed' && '➜ Swipe → for Progress'}
+                                    {booking.status === 'in-progress' && '✓ Mark Complete'}
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Assign Colleague Button */}
+                              <button
+                                onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
+                                className="w-full px-4 py-3 md:py-4 bg-purple-100 hover:bg-purple-200 active:bg-purple-300 text-purple-700 rounded-xl font-bold transition-all border-2 border-purple-300 touch-manipulation"
+                              >
+                                👤 Assign to Colleague
+                              </button>
+
+                              {/* Edit & Details Buttons */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation">
+                                  📄 Full Details
+                                </button>
+                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation">
+                                  ✏️ Edit
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-blue-300">
+                      <p className="text-3xl mb-2">📭</p>
+                      <p className="text-lg font-bold text-gray-700">No appointments scheduled</p>
+                      <p className="text-sm text-gray-600">Pick another date or create a new booking</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
       </main>
+
+      {/* Status Confirmation Dialog */}
+      {statusConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
+            <div className="px-5 md:px-7 py-8 md:py-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">
+                {(() => {
+                  const booking = bookings.find(b => b.id === statusConfirmDialog.bookingId)
+                  if (!booking) return 'Action'
+                  if (booking.status === 'pending') return '✓ Confirm Job?'
+                  if (booking.status === 'confirmed') return '✗ Unconfirm Job?'
+                  if (booking.status === 'in-progress') return '✓ Mark as Complete?'
+                  return 'Status Update'
+                })()}
+              </h2>
+
+              <div className="mb-8 space-y-3">
+                {(() => {
+                  const booking = bookings.find(b => b.id === statusConfirmDialog.bookingId)
+                  if (!booking) return null
+                  
+                  if (booking.status === 'pending') {
+                    return (
+                      <>
+                        <p className="text-base text-gray-700 mb-4">Ready to confirm this job with {booking.customerName}?</p>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border-2 border-blue-300">
+                          <p className="text-sm text-blue-700 font-semibold">⏰ Appointment</p>
+                          <p className="text-lg font-bold text-blue-900">{formatDate(booking.date)} at {booking.time}</p>
+                        </div>
+                      </>
+                    )
+                  } else if (booking.status === 'confirmed') {
+                    return (
+                      <p className="text-base text-gray-700">This will return the job to pending status. Continue?</p>
+                    )
+                  } else if (booking.status === 'in-progress') {
+                    return (
+                      <>
+                        <p className="text-base text-gray-700 mb-4">Mark this job as complete for {booking.customerName}?</p>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border-2 border-green-300">
+                          <p className="text-sm text-green-700 font-semibold">✓ Work Status</p>
+                          <p className="text-lg font-bold text-green-900">Ready to close out this appointment</p>
+                        </div>
+                      </>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+
+              <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setStatusConfirmDialog(null)}
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleStatusConfirm(statusConfirmDialog.bookingId)}
+                  className="w-full px-4 py-4 bg-gradient-to-r from-hvac-orange to-orange-600 text-white rounded-xl font-bold text-base hover:from-orange-600 hover:to-orange-700 active:from-orange-700 active:to-orange-800 transition-all shadow-md hover:shadow-lg touch-manipulation"
+                >
+                  ✓ Confirm
+                </button>
+                {(() => {
+                  const booking = bookings.find(b => b.id === statusConfirmDialog.bookingId)
+                  if (booking?.status === 'confirmed') {
+                    return (
+                      <button
+                        onClick={() => handleStatusUnconfirm(statusConfirmDialog.bookingId)}
+                        className="w-full px-4 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-base hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 transition-all shadow-md hover:shadow-lg touch-manipulation"
+                      >
+                        ✗ Unconfirm
+                      </button>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Colleague Modal */}
+      {assignColleagueModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
+            <div className="px-5 md:px-7 py-8 md:py-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">👤 Assign to Colleague</h2>
+
+              <div className="mb-6 space-y-3 max-h-64 overflow-y-auto">
+                {TEAM_MEMBERS.map(colleague => (
+                  <button
+                    key={colleague.id}
+                    onClick={() => handleAssignColleague(assignColleagueModal.bookingId, colleague.id)}
+                    className="w-full p-4 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 active:from-purple-200 active:to-purple-300 rounded-xl border-2 border-purple-300 transition-all text-left touch-manipulation"
+                  >
+                    <p className="text-lg font-bold text-purple-900">{colleague.name}</p>
+                    <p className="text-sm text-purple-700">{colleague.role}</p>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setAssignColleagueModal(null)}
+                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Refund Modal - Modern & Accessible */}
       {refundModalOpen && selectedBooking && (
