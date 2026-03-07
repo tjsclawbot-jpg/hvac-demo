@@ -17,8 +17,10 @@ interface Booking {
   time: string
   depositAmount: number
   depositPaid: boolean
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'no-show' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'in-contractor-pipeline' | 'completed-not-in-pipeline' | 'no-show' | 'cancelled'
   assignedTo?: string
+  contractor_assigned?: string
+  progression_path?: 'progressed' | 'not_progressed'
 }
 
 // Hardcoded team members for colleague assignment
@@ -34,7 +36,9 @@ const statusColorMap = {
   pending: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⏱', buttonText: 'Confirm Job', buttonBg: 'bg-gray-400 hover:bg-gray-500' },
   confirmed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓', buttonText: 'Confirmed', buttonBg: 'bg-green-500 hover:bg-green-600' },
   'in-progress': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', icon: '⚡', buttonText: 'In Progress', buttonBg: 'bg-orange-500 hover:bg-orange-600' },
-  completed: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', icon: '✓✓', buttonText: 'Completed', buttonBg: 'bg-purple-500 cursor-not-allowed opacity-75' },
+  completed: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', icon: '🔍', buttonText: 'Inspected', buttonBg: 'bg-blue-500 cursor-not-allowed opacity-75' },
+  'in-contractor-pipeline': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', icon: '✓✓', buttonText: 'In Pipeline', buttonBg: 'bg-green-500 cursor-not-allowed opacity-75' },
+  'completed-not-in-pipeline': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '✓', buttonText: 'Completed', buttonBg: 'bg-gray-500 cursor-not-allowed opacity-75' },
   'no-show': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', icon: '✗', buttonText: 'No-Show', buttonBg: 'bg-red-500' },
   cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', icon: '⊘', buttonText: 'Cancelled', buttonBg: 'bg-gray-400' }
 }
@@ -66,6 +70,11 @@ export default function AdminBookings() {
   const [statusConfirmDialog, setStatusConfirmDialog] = useState<{ bookingId: string; newStatus: string } | null>(null)
   const [assignColleagueModal, setAssignColleagueModal] = useState<{ bookingId: string } | null>(null)
   const [touchStart, setTouchStart] = useState<{ x: number; bookingId: string } | null>(null)
+  const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
+  const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [refundConfirmStep, setRefundConfirmStep] = useState<'first' | 'second' | null>(null)
+  const [refundBookingId, setRefundBookingId] = useState<string | null>(null)
   
   // Helper function to get progress percentage for status
   const getProgressPercentage = (status: string) => {
@@ -124,12 +133,52 @@ export default function AdminBookings() {
     let nextStatus = 'pending'
     if (currentBooking.status === 'pending') nextStatus = 'confirmed'
     else if (currentBooking.status === 'confirmed') nextStatus = 'in-progress'
-    else if (currentBooking.status === 'in-progress') nextStatus = 'completed'
+    else if (currentBooking.status === 'in-progress') {
+      // Show two-path completion dialog instead of directly completing
+      setCompletionPathModal({ bookingId })
+      setStatusConfirmDialog(null)
+      return
+    }
 
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: nextStatus as any } : b
     ))
     setStatusConfirmDialog(null)
+  }
+
+  const handleCompletionPath = (bookingId: string, path: 'progressed' | 'not_progressed') => {
+    const newStatus = path === 'progressed' ? 'in-contractor-pipeline' : 'completed-not-in-pipeline'
+    
+    if (path === 'progressed') {
+      // Open contractor selection dialog
+      setSelectContractorModal({ bookingId })
+      setCompletionPathModal(null)
+    } else {
+      // Mark as completed not in pipeline
+      setBookings(bookings.map(b => 
+        b.id === bookingId 
+          ? { ...b, status: newStatus as any, progression_path: path }
+          : b
+      ))
+      setCompletionPathModal(null)
+    }
+  }
+
+  const handleSelectContractor = (bookingId: string, contractorId: string) => {
+    const contractor = TEAM_MEMBERS.find(tm => tm.id === contractorId)
+    if (!contractor) return
+
+    setBookings(bookings.map(b => 
+      b.id === bookingId 
+        ? { 
+            ...b, 
+            status: 'in-contractor-pipeline', 
+            progression_path: 'progressed',
+            contractor_assigned: contractor.name 
+          } 
+        : b
+    ))
+    setSelectContractorModal(null)
   }
 
   const handleStatusUnconfirm = (bookingId: string) => {
@@ -193,6 +242,49 @@ export default function AdminBookings() {
   
   const totalBookings = bookings.length + voiceBookings.length
   const totalDeposits = bookings.filter(b => b.depositPaid).length * 150
+
+  // Two-path completion metrics
+  const jobsCompletedProgressed = bookings.filter(b => b.progression_path === 'progressed').length
+  const jobsCompletedNotProgressed = bookings.filter(b => b.progression_path === 'not_progressed').length
+  const jobsInContractorPipeline = bookings.filter(b => b.status === 'in-contractor-pipeline').length
+
+  // Enhanced metrics
+  const webBookings = bookings.length
+  const voiceBookingsCount = voiceBookings.length
+  const jobsInProgress = bookings.filter(b => b.status === 'in-progress').length + voiceBookings.filter(b => b.status === 'in-progress').length
+  const jobsCompleted = bookings.filter(b => b.status === 'completed').length + voiceBookings.filter(b => b.status === 'completed').length
+  
+  // Contractor pipeline metrics (simulate with 40% of confirmed jobs)
+  const jobsInContractorPipeline = Math.ceil(bookings.filter(b => b.status === 'confirmed').length * 0.4)
+  const jobsCompletedNotInPipeline = jobsCompleted
+
+  // Status breakdown
+  const statusBreakdown = {
+    pending: bookings.filter(b => b.status === 'pending').length + voiceBookings.filter(b => b.status === 'pending').length,
+    confirmed: bookings.filter(b => b.status === 'confirmed').length + voiceBookings.filter(b => b.status === 'confirmed').length,
+    inProgress: jobsInProgress,
+    completed: jobsCompleted
+  }
+
+  // Voice vs Web breakdown
+  const voiceVsWebBreakdown = {
+    web: webBookings,
+    voice: voiceBookingsCount
+  }
+
+  // Calculate percentages for charts
+  const totalForPercent = totalBookings || 1
+  const webPercentage = Math.round((webBookings / totalForPercent) * 100)
+  const voicePercentage = Math.round((voiceBookingsCount / totalForPercent) * 100)
+  
+  const statusTotalForPercent = Object.values(statusBreakdown).reduce((a, b) => a + b, 0) || 1
+  const pendingPercentage = Math.round((statusBreakdown.pending / statusTotalForPercent) * 100)
+  const confirmedPercentage = Math.round((statusBreakdown.confirmed / statusTotalForPercent) * 100)
+  const inProgressPercentage = Math.round((statusBreakdown.inProgress / statusTotalForPercent) * 100)
+  const completedPercentage = Math.round((statusBreakdown.completed / statusTotalForPercent) * 100)
+
+  // Contractor pipeline health (0-100%)
+  const contractorPipelineHealth = jobsInContractorPipeline > 0 ? 65 : 0
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
@@ -265,6 +357,27 @@ export default function AdminBookings() {
               <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900">Completed</p>
               <p className="text-4xl font-bold text-emerald-600 mt-2">{voiceBookings.filter(b => b.status === 'completed').length}</p>
               <div className="text-2xl mt-3">✓</div>
+            </div>
+
+            {/* Jobs Completed & Progressed - New Card */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-green-900">Completed & Progressed</p>
+              <p className="text-4xl font-bold text-green-700 mt-2">{jobsCompletedProgressed}</p>
+              <div className="text-2xl mt-3">✓✓</div>
+            </div>
+
+            {/* Jobs Completed & Not Progressed - New Card */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-gray-900">Completed & Not Progressed</p>
+              <p className="text-4xl font-bold text-gray-700 mt-2">{jobsCompletedNotProgressed}</p>
+              <div className="text-2xl mt-3">✓</div>
+            </div>
+
+            {/* Jobs in Contractor Pipeline - New Card */}
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+              <p className="text-xs uppercase tracking-wider font-semibold text-indigo-900">In Contractor Pipeline</p>
+              <p className="text-4xl font-bold text-indigo-700 mt-2">{jobsInContractorPipeline}</p>
+              <div className="text-2xl mt-3">🚀</div>
             </div>
           </div>
 
@@ -366,20 +479,32 @@ export default function AdminBookings() {
                 return (
                   <div
                     key={booking.id}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
+                    className={`rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden ${
+                      booking.progression_path === 'progressed'
+                        ? 'bg-green-50 border-green-300'
+                        : booking.progression_path === 'not_progressed'
+                        ? 'bg-gray-50 border-gray-300'
+                        : 'bg-white border-gray-200'
+                    }`}
                   >
                     {/* Card Header */}
                     <button
                       onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                      className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation"
+                      className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:opacity-85 transition-colors touch-manipulation"
                     >
                       <div className="flex-grow min-w-0">
-                        {/* Status Badge */}
-                        <div className="flex items-center gap-2 mb-2">
+                        {/* Status & Contractor Badges */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2`}>
                             <span>{statusConfig.icon}</span>
-                            <span>{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                            <span>{booking.status.replace('-', ' ').charAt(0).toUpperCase() + booking.status.slice(1).replace('-', ' ')}</span>
                           </span>
+                          {booking.contractor_assigned && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border bg-indigo-100 text-indigo-700 border-indigo-300 border-2">
+                              <span>👤</span>
+                              <span>{booking.contractor_assigned}</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Customer Name */}
@@ -448,24 +573,65 @@ export default function AdminBookings() {
                           </select>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {booking.status !== 'completed' && booking.status !== 'cancelled' && (
-                              <button
-                                onClick={() => {
-                                  setSelectedBooking(booking)
-                                  setRefundAmount(145)
-                                  setRefundModalOpen(true)
-                                }}
-                                className="px-4 py-3 md:py-3.5 text-base font-semibold bg-red-50 border-2 border-red-300 text-red-700 rounded-xl hover:bg-red-100 active:bg-red-200 transition-all"
-                              >
-                                💰 Process Refund
-                              </button>
-                            )}
-
                             <button
                               className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all"
                             >
                               📄 Full Details
                             </button>
+
+                            {/* Overflow Menu Button */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all touch-manipulation"
+                              >
+                                ⋯ More
+                              </button>
+
+                              {/* Dropdown Menu */}
+                              {openMenuId === booking.id && (
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuId(null)
+                                    }}
+                                    className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                  >
+                                    📝 View Notes
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setAssignColleagueModal({ bookingId: booking.id })
+                                      setOpenMenuId(null)
+                                    }}
+                                    className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                  >
+                                    👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                        setSelectedBooking(booking)
+                                        setRefundAmount(145)
+                                        setRefundConfirmStep('first')
+                                        setRefundBookingId(booking.id)
+                                      }
+                                      setOpenMenuId(null)
+                                    }}
+                                    className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                      booking.status === 'completed' || booking.status === 'cancelled'
+                                        ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                        : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                    }`}
+                                    disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                  >
+                                    💰 More Actions → Refund
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </>
@@ -606,11 +772,67 @@ export default function AdminBookings() {
                                 📞 Call Customer
                               </button>
 
-                              <button
-                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all"
-                              >
-                                📄 View Full Details
-                              </button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <button
+                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all"
+                                >
+                                  📄 View Full Details
+                                </button>
+
+                                {/* Overflow Menu Button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                    className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all touch-manipulation"
+                                  >
+                                    ⋯ More
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {openMenuId === booking.id && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                      <button
+                                        onClick={() => {
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                      >
+                                        📝 View Notes
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setAssignColleagueModal({ bookingId: booking.id })
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                      >
+                                        👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                            setSelectedBooking(booking)
+                                            setRefundAmount(145)
+                                            setRefundConfirmStep('first')
+                                            setRefundBookingId(booking.id)
+                                          }
+                                          setOpenMenuId(null)
+                                        }}
+                                        className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                          booking.status === 'completed' || booking.status === 'cancelled'
+                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                        }`}
+                                        disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                      >
+                                        💰 More Actions → Refund
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </>
                         )}
@@ -798,14 +1020,65 @@ export default function AdminBookings() {
                                 👤 Assign to Colleague
                               </button>
 
-                              {/* Edit & Details Buttons */}
+                              {/* Edit & Details Buttons with Overflow Menu */}
                               <div className="grid grid-cols-2 gap-3">
                                 <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation">
                                   📄 Full Details
                                 </button>
-                                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation">
-                                  ✏️ Edit
-                                </button>
+                                
+                                {/* Overflow Menu Button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                    className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all border border-gray-300 text-sm md:text-base touch-manipulation"
+                                  >
+                                    ⋯ More
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {openMenuId === booking.id && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-40">
+                                      <button
+                                        onClick={() => {
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700 rounded-t-lg"
+                                      >
+                                        📝 View Notes
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setAssignColleagueModal({ bookingId: booking.id })
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full px-4 py-3 text-base font-semibold text-left hover:bg-gray-50 active:bg-gray-100 transition-all border-b border-gray-200 text-gray-700"
+                                      >
+                                        👤 Edit Assignment {booking.assignedTo && `(${booking.assignedTo})`}
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                            setSelectedBooking(booking)
+                                            setRefundAmount(145)
+                                            setRefundConfirmStep('first')
+                                            setRefundBookingId(booking.id)
+                                          }
+                                          setOpenMenuId(null)
+                                        }}
+                                        className={`w-full px-4 py-3 text-base font-semibold text-left transition-all rounded-b-lg ${
+                                          booking.status === 'completed' || booking.status === 'cancelled'
+                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'hover:bg-red-50 active:bg-red-100 text-red-600'
+                                        }`}
+                                        disabled={booking.status === 'completed' || booking.status === 'cancelled'}
+                                      >
+                                        💰 More Actions → Refund
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -940,8 +1213,164 @@ export default function AdminBookings() {
         </div>
       )}
 
-      {/* Refund Modal - Modern & Accessible */}
-      {refundModalOpen && selectedBooking && (
+      {/* Refund Modal - 2-Step Confirmation */}
+      {refundConfirmStep && selectedBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl">
+            <div className="px-5 md:px-7 py-8 md:py-10">
+              {/* Step 1: First Confirmation */}
+              {refundConfirmStep === 'first' && (
+                <>
+                  <h2 className="text-4xl md:text-5xl font-bold text-hvac-darkgray mb-2">Process Refund?</h2>
+                  <p className="text-lg text-gray-600 mb-8">Are you sure you want to process this refund?</p>
+
+                  <div className="mb-8 space-y-4">
+                    {/* Customer Info */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Customer</p>
+                      <p className="text-xl font-bold text-hvac-darkgray">{selectedBooking.customerName}</p>
+                    </div>
+
+                    {/* Appointment Date */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Appointment Date</p>
+                      <p className="text-xl font-bold text-hvac-darkgray">{formatDate(selectedBooking.date)}</p>
+                    </div>
+
+                    {/* Deposit Amount */}
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border-2 border-green-300">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-green-900 mb-2">Original Deposit</p>
+                      <p className="text-5xl font-bold text-green-600">{formatCurrency(150)}</p>
+                    </div>
+
+                    {/* Refund Amount Selection */}
+                    <div className="mt-6">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-gray-700 mb-4">Select Refund Amount</p>
+                      <div className="space-y-3">
+                        {/* Option 1: With Fee */}
+                        <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation ${
+                          refundAmount === 145
+                            ? 'border-hvac-orange bg-orange-50'
+                            : 'border-gray-300 bg-white hover:border-hvac-orange'
+                        }`}>
+                          <input
+                            type="radio"
+                            checked={refundAmount === 145}
+                            onChange={() => setRefundAmount(145)}
+                            className="w-5 h-5 mr-4 cursor-pointer"
+                          />
+                          <span className="flex-grow">
+                            <span className="text-xl font-bold text-hvac-orange">{formatCurrency(145)}</span>
+                            <span className="text-sm text-gray-600 block">Minus $5 processing fee</span>
+                          </span>
+                        </label>
+
+                        {/* Option 2: Full Refund */}
+                        <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all touch-manipulation ${
+                          refundAmount === 150
+                            ? 'border-green-600 bg-green-50'
+                            : 'border-gray-300 bg-white hover:border-green-600'
+                        }`}>
+                          <input
+                            type="radio"
+                            checked={refundAmount === 150}
+                            onChange={() => setRefundAmount(150)}
+                            className="w-5 h-5 mr-4 cursor-pointer"
+                          />
+                          <span className="flex-grow">
+                            <span className="text-xl font-bold text-green-600">{formatCurrency(150)}</span>
+                            <span className="text-sm text-gray-600 block">Full refund (no fees)</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        setRefundConfirmStep(null)
+                        setRefundBookingId(null)
+                        setSelectedBooking(null)
+                      }}
+                      className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => setRefundConfirmStep('second')}
+                      className="w-full px-4 py-4 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-bold text-base hover:from-orange-700 hover:to-orange-800 active:from-orange-800 active:to-orange-900 transition-all shadow-md hover:shadow-lg touch-manipulation"
+                    >
+                      ➜ Continue to Confirmation
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Step 2: Final Confirmation */}
+              {refundConfirmStep === 'second' && selectedBooking && (
+                <>
+                  <div className="text-center mb-8">
+                    <div className="text-6xl mb-4">⚠️</div>
+                    <h2 className="text-4xl md:text-5xl font-bold text-hvac-darkgray mb-3">Are you sure?</h2>
+                    <p className="text-lg text-red-600 font-semibold">This cannot be undone</p>
+                  </div>
+
+                  <div className="mb-8 space-y-4">
+                    {/* Customer Info - Read Only */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Customer</p>
+                      <p className="text-xl font-bold text-hvac-darkgray">{selectedBooking.customerName}</p>
+                    </div>
+
+                    {/* Refund Amount - Prominent */}
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border-2 border-red-300">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-red-900 mb-2">Refund Amount</p>
+                      <p className="text-6xl font-bold text-red-600 mb-2">{formatCurrency(refundAmount)}</p>
+                      <p className="text-base text-red-800">
+                        {refundAmount === 145 ? 'Minus $5 processing fee' : 'Full refund (no fees)'}
+                      </p>
+                    </div>
+
+                    {/* Warning Message */}
+                    <div className="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-300">
+                      <p className="text-sm text-yellow-800 font-semibold">
+                        ⚡ Once confirmed, the customer will receive {formatCurrency(refundAmount)} back to their original payment method. This action cannot be reversed.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={() => setRefundConfirmStep('first')}
+                      className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (selectedBooking) {
+                          handleRefund(selectedBooking.id)
+                          setRefundConfirmStep(null)
+                          setRefundBookingId(null)
+                        }
+                      }}
+                      className="w-full px-4 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold text-base hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 transition-all shadow-md hover:shadow-lg touch-manipulation"
+                    >
+                      💰 Confirm Refund {formatCurrency(refundAmount)}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Legacy Refund Modal - Keep for backward compatibility */}
+      {refundModalOpen && selectedBooking && !refundConfirmStep && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl">
             <div className="px-5 md:px-7 py-8 md:py-10">
