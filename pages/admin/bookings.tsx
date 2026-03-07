@@ -304,15 +304,12 @@ export default function AdminBookings() {
     setSelectContractorModal(null)
 
     // Send SMS notification to contractor
-    const dashboardLink = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/admin/bookings`
     await sendContractorAssignmentSMS(
       contractor.phone,
       booking.customerName,
       booking.customerAddress,
-      booking.date,
+      formatDate(booking.date),
       booking.time,
-      booking.customerPhone,
-      dashboardLink,
       bookingId
     )
   }
