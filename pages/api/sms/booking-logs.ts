@@ -33,13 +33,13 @@ export default async function handler(
     if (!result.success) {
       return res.status(500).json({
         success: false,
-        error: result.error,
+        error: result.error ?? 'Unknown error',
       })
     }
 
     return res.status(200).json({
       success: true,
-      logs: result.data,
+      logs: result.data || [],
     })
   } catch (error) {
     console.error('❌ Error fetching booking SMS logs:', error)
