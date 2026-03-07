@@ -926,7 +926,26 @@ export default function AdminBookings() {
                           {/* Fifth Row: Status Menu + Expand Button */}
                           <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
                             <button
-                              onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                              onClick={async () => {
+                                const newExpandedState = isExpanded ? null : booking.id
+                                setExpandedBookingId(newExpandedState)
+                                
+                                // Load SMS history when expanding
+                                if (newExpandedState === booking.id && !smsHistory[booking.id]) {
+                                  setLoadingSMSHistory({ ...loadingSMSHistory, [booking.id]: true })
+                                  try {
+                                    const { fetchSMSLogsForBooking } = await import('@/lib/smsHelper')
+                                    const result = await fetchSMSLogsForBooking(booking.id)
+                                    if (result.success) {
+                                      setSmsHistory({ ...smsHistory, [booking.id]: result.data || [] })
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to load SMS history:', error)
+                                  } finally {
+                                    setLoadingSMSHistory({ ...loadingSMSHistory, [booking.id]: false })
+                                  }
+                                }
+                              }}
                               className="flex-grow px-4 py-2.5 text-base font-semibold text-hvac-darkgray hover:bg-gray-50 rounded-lg transition-colors touch-manipulation"
                             >
                               {isExpanded ? '▼ Details' : '▶ Details'}
