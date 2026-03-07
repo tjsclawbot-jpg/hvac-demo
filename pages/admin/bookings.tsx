@@ -280,47 +280,102 @@ export default function AdminBookings() {
             <p className="text-base md:text-lg text-gray-600 font-medium">Manage your customer bookings from web and voice channels</p>
           </div>
 
-          {/* Essential Metrics - Small Grid (Venus-Inspired) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
-            {/* Total Bookings */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Total Bookings</p>
-              <p className="text-3xl md:text-4xl font-bold text-hvac-darkgray">{totalBookings}</p>
-              <p className="text-xs text-gray-500 mt-2">{webBookings} web • {voiceBookingsCount} voice</p>
-            </div>
-
-            {/* Upcoming Jobs */}
-            <div className="bg-white rounded-xl border border-orange-200 p-4 shadow-sm hover:shadow-md transition-all">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Upcoming</p>
-              <p className="text-3xl md:text-4xl font-bold text-hvac-orange">{upcomingCount}</p>
-              <p className="text-xs text-gray-500 mt-2">Confirmed & Pending</p>
-            </div>
-
-            {/* In Progress */}
-            <div className="bg-white rounded-xl border border-yellow-200 p-4 shadow-sm hover:shadow-md transition-all">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">In Progress</p>
-              <p className="text-3xl md:text-4xl font-bold text-yellow-600">{jobsInProgress}</p>
-              <p className="text-xs text-gray-500 mt-2">Active jobs</p>
-            </div>
-
-            {/* Completed Today */}
-            <div className="bg-white rounded-xl border border-green-200 p-4 shadow-sm hover:shadow-md transition-all">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Completed</p>
-              <p className="text-3xl md:text-4xl font-bold text-green-600">{jobsCompleted}</p>
-              <p className="text-xs text-gray-500 mt-2">Total completed</p>
-            </div>
-
-            {/* New Clients (Voice vs Web) */}
-            <div className="bg-white rounded-xl border border-purple-200 p-4 shadow-sm hover:shadow-md transition-all">
-              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">New Clients</p>
-              <div className="flex gap-2 items-center">
-                <span className="text-2xl font-bold text-blue-600">{webBookings}</span>
-                <span className="text-xs text-gray-400">web</span>
-                <span className="text-2xl font-bold text-purple-600">{voiceBookingsCount}</span>
-                <span className="text-xs text-gray-400">voice</span>
+          {/* Essential Metrics - Simplified Top Section */}
+          <div className="mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-4">
+              {/* Upcoming Jobs - PRIMARY METRIC */}
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border-2 border-orange-300 p-6 shadow-sm hover:shadow-md transition-all">
+                <p className="text-xs uppercase tracking-wider font-semibold text-orange-700 mb-2">Upcoming Jobs</p>
+                <p className="text-5xl md:text-6xl font-bold text-orange-600 mb-3">{upcomingCount}</p>
+                <p className="text-sm md:text-base text-orange-600 font-medium">Confirmed & Pending</p>
               </div>
-              <p className="text-xs text-gray-500 mt-2">{webPercentage}% / {voicePercentage}%</p>
+
+              {/* In Progress - PRIMARY METRIC */}
+              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl border-2 border-yellow-300 p-6 shadow-sm hover:shadow-md transition-all">
+                <p className="text-xs uppercase tracking-wider font-semibold text-yellow-700 mb-2">In Progress</p>
+                <p className="text-5xl md:text-6xl font-bold text-yellow-600 mb-3">{jobsInProgress}</p>
+                <p className="text-sm md:text-base text-yellow-600 font-medium">Active jobs</p>
+              </div>
             </div>
+
+            {/* Details Button - Expandable Secondary Metrics */}
+            <button
+              onClick={() => setExpandedBookingId(expandedBookingId === 'metrics' ? null : 'metrics')}
+              className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all flex items-center justify-between"
+            >
+              <span>📊 Details</span>
+              <span className="text-lg">{expandedBookingId === 'metrics' ? '▼' : '▶'}</span>
+            </button>
+
+            {/* Expandable Secondary Metrics */}
+            {expandedBookingId === 'metrics' && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                {/* Total Bookings */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Total Bookings</p>
+                  <p className="text-3xl font-bold text-hvac-darkgray">{totalBookings}</p>
+                </div>
+
+                {/* Completed */}
+                <div className="bg-white rounded-lg border border-green-200 p-4">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Completed</p>
+                  <p className="text-3xl font-bold text-green-600">{jobsCompleted}</p>
+                </div>
+
+                {/* New Clients - Web vs Voice */}
+                <div className="bg-white rounded-lg border border-purple-200 p-4">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">New Clients</p>
+                  <div className="flex gap-3">
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">{webBookings}</p>
+                      <p className="text-xs text-gray-500">web</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-purple-600">{voiceBookingsCount}</p>
+                      <p className="text-xs text-gray-500">voice</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Web vs Voice Breakdown */}
+                <div className="bg-white rounded-lg border border-blue-200 p-4 sm:col-span-2 lg:col-span-1">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">Channel Breakdown</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 bg-blue-600 rounded-full" style={{ width: `${webPercentage}%` }}></div>
+                      <span className="text-xs font-semibold text-gray-700">{webPercentage}% Web</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 bg-purple-600 rounded-full" style={{ width: `${voicePercentage}%` }}></div>
+                      <span className="text-xs font-semibold text-gray-700">{voicePercentage}% Voice</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Breakdown */}
+                <div className="bg-white rounded-lg border border-indigo-200 p-4 sm:col-span-2 lg:col-span-2">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">Status Breakdown</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Pending</p>
+                      <p className="text-lg font-bold text-gray-700">{statusBreakdown.pending}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Confirmed</p>
+                      <p className="text-lg font-bold text-green-600">{statusBreakdown.confirmed}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">In Progress</p>
+                      <p className="text-lg font-bold text-yellow-600">{statusBreakdown.inProgress}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Completed</p>
+                      <p className="text-lg font-bold text-blue-600">{statusBreakdown.completed}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Navigation Bar - Clean & Simple */}
@@ -405,92 +460,151 @@ export default function AdminBookings() {
               {filteredBookings.map(booking => {
                 const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
                 const isExpanded = expandedBookingId === booking.id
+                const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
                 
                 return (
                   <div
                     key={booking.id}
                     className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
                   >
-                    {/* Card Header */}
-                    <button
-                      onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                      className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation min-h-[60px]"
-                    >
-                      <div className="flex-grow min-w-0">
-                        {/* Status Badge */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2`}>
-                            <span>{statusConfig.icon}</span>
-                            <span>{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
-                          </span>
+                    {/* Card Header - New Hierarchy */}
+                    <div className="px-5 md:px-7 py-5 md:py-6 space-y-4">
+                      {/* First Row: Status Badge (left) + Service Type (center-right) */}
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Status Badge - Upper Left */}
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} flex-shrink-0`}>
+                          <span>{statusConfig.icon}</span>
+                          <span className="hidden sm:inline">{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                        </span>
+                        
+                        {/* Service Type - Right Side */}
+                        <div className="flex items-center gap-2 text-right flex-shrink-0">
+                          <span className="text-lg">{serviceIcon}</span>
+                          <span className="text-sm md:text-base font-semibold text-gray-700 capitalize hidden sm:inline">{booking.serviceType.replace('-', ' ')}</span>
                         </div>
-
-                        {/* Customer Name */}
-                        <h3 className="text-xl md:text-2xl font-bold text-hvac-darkgray mb-1 break-words">
-                          {booking.customerName}
-                        </h3>
-
-                        {/* Date & Time */}
-                        <p className="text-sm md:text-base text-gray-600">
-                          📅 {formatDate(booking.date)} at {booking.time}
-                        </p>
                       </div>
 
-                      {/* Expand Icon */}
-                      <div className="flex-shrink-0 text-2xl text-gray-400">
-                        {isExpanded ? '▼' : '▶'}
+                      {/* Second Row: Large Customer Name */}
+                      <h3 className="text-2xl md:text-3xl font-bold text-hvac-darkgray break-words leading-tight">
+                        {booking.customerName}
+                      </h3>
+
+                      {/* Third Row: Date + Time */}
+                      <p className="text-base md:text-lg text-gray-700 font-medium">
+                        📅 {formatDate(booking.date)} • {booking.time}
+                      </p>
+
+                      {/* Fourth Row: Address + Google Maps Button */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-grow min-w-0">
+                          <p className="text-base text-gray-700 font-medium truncate">
+                            📍 {booking.customerAddress}
+                          </p>
+                        </div>
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(booking.customerAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="View on Google Maps"
+                        >
+                          🗺️
+                        </a>
                       </div>
-                    </button>
+
+                      {/* Fifth Row: Status Menu on Right + Expand Button */}
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                        <button
+                          onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                          className="flex-grow px-4 py-2.5 text-base font-semibold text-hvac-darkgray hover:bg-gray-50 rounded-lg transition-colors touch-manipulation"
+                        >
+                          {isExpanded ? '▼ Details' : '▶ Details'}
+                        </button>
+
+                        {/* Status Management Menu (⋯) - Hidden Menu */}
+                        <div className="relative group">
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                            className="px-3 py-2.5 text-xl font-bold hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                            title="Status options"
+                          >
+                            ⋯
+                          </button>
+                          
+                          {/* Dropdown Menu */}
+                          {openMenuId === booking.id && (
+                            <div className="absolute right-0 top-full mt-2 w-56 bg-white border-2 border-gray-300 rounded-xl shadow-lg z-40">
+                              <div className="p-2 space-y-1">
+                                {['pending', 'confirmed', 'in-progress', 'completed', 'no-show', 'cancelled'].map(status => (
+                                  <button
+                                    key={status}
+                                    onClick={() => {
+                                      handleStatusChange(booking.id, status)
+                                      setOpenMenuId(null)
+                                    }}
+                                    className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all touch-manipulation ${
+                                      booking.status === status
+                                        ? 'bg-hvac-orange text-white'
+                                        : 'text-gray-700 hover:bg-gray-100'
+                                    }`}
+                                  >
+                                    {statusColorMap[status as keyof typeof statusColorMap]?.icon} {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Expandable Details */}
                     {isExpanded && (
                       <>
                         <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-5 bg-gray-50">
-                          {/* Customer Info */}
-                          <div>
-                            <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-3">Customer Details</p>
-                            <div className="space-y-2">
-                              <p className="text-base md:text-lg font-bold text-hvac-darkgray">{booking.customerName}</p>
-                              <a href={`mailto:${booking.customerEmail}`} className="text-base text-blue-600 hover:underline">{booking.customerEmail}</a>
-                              <a href={`tel:${booking.customerPhone}`} className="text-base text-blue-600 hover:underline block">{booking.customerPhone}</a>
-                            </div>
-                          </div>
-
-                          {/* Service & Address */}
+                          {/* Contact Information Grid */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Email */}
                             <div className="bg-white rounded-xl p-4 border border-gray-200">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Service Type</p>
-                              <p className="text-lg md:text-xl font-bold text-hvac-darkgray capitalize">{booking.serviceType.replace('-', ' ')}</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Email</p>
+                              <a href={`mailto:${booking.customerEmail}`} className="text-base text-blue-600 hover:underline font-medium break-all">
+                                {booking.customerEmail}
+                              </a>
                             </div>
 
+                            {/* Phone */}
                             <div className="bg-white rounded-xl p-4 border border-gray-200">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Deposit</p>
-                              <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(booking.depositAmount)}</p>
-                              <p className="text-sm text-gray-600 mt-1">{booking.depositPaid ? '✓ Paid' : '⏳ Pending'}</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Phone</p>
+                              <a href={`tel:${booking.customerPhone}`} className="text-base text-blue-600 hover:underline font-medium">
+                                {booking.customerPhone}
+                              </a>
                             </div>
                           </div>
 
-                          {/* Address */}
-                          <div className="bg-white rounded-xl p-4 border border-gray-200">
-                            <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Service Address</p>
-                            <p className="text-base md:text-lg font-medium text-hvac-darkgray">{booking.customerAddress}</p>
+                          {/* Deposit Information */}
+                          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border-2 border-green-300">
+                            <p className="text-xs uppercase tracking-wider font-semibold text-green-900 mb-2">Deposit</p>
+                            <p className="text-3xl font-bold text-green-600">{formatCurrency(booking.depositAmount)}</p>
+                            <p className="text-sm text-green-700 mt-2 font-semibold">{booking.depositPaid ? '✓ Paid' : '⏳ Pending Payment'}</p>
                           </div>
                         </div>
 
-                        {/* Actions */}
+                        {/* Quick Action Buttons */}
                         <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-3 bg-white">
-                          <select
-                            value={booking.status}
-                            onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                            className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
-                          >
-                            <option value="pending">⏱ Mark as Pending</option>
-                            <option value="confirmed">✓ Mark as Confirmed</option>
-                            <option value="completed">✓✓ Mark as Completed</option>
-                            <option value="no-show">✗ Mark as No-Show</option>
-                          </select>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <button
+                              onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
+                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-purple-50 border-2 border-purple-300 text-purple-700 rounded-xl hover:bg-purple-100 active:bg-purple-200 transition-all min-h-[44px]"
+                            >
+                              👤 Assign
+                            </button>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all min-h-[44px]"
+                            >
+                              📝 Notes
+                            </button>
+
                             <button
                               onClick={() => {
                                 setSelectedBooking(booking)
@@ -499,13 +613,7 @@ export default function AdminBookings() {
                               }}
                               className="px-4 py-3 md:py-3.5 text-base font-semibold bg-red-50 border-2 border-red-300 text-red-700 rounded-xl hover:bg-red-100 active:bg-red-200 transition-all min-h-[44px]"
                             >
-                              💰 Process Refund
-                            </button>
-
-                            <button
-                              className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all min-h-[44px]"
-                            >
-                              📄 Full Details
+                              💰 Refund
                             </button>
                           </div>
                         </div>
@@ -540,42 +648,96 @@ export default function AdminBookings() {
                         key={booking.id}
                         className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
                       >
-                        {/* Card Header */}
-                        <button
-                          onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                          className="w-full px-5 md:px-7 py-5 md:py-6 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors touch-manipulation min-h-[60px]"
-                        >
-                          <div className="flex-grow min-w-0">
-                            {/* Status Badge */}
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border-2`}>
-                                <span className="text-base">{statusConfig.icon}</span>
-                                <span>{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
-                              </span>
+                        {/* Card Header - New Hierarchy (Voice variant) */}
+                        <div className="px-5 md:px-7 py-5 md:py-6 space-y-4">
+                          {/* First Row: Status Badge (left) + Service Type (center-right) */}
+                          <div className="flex items-center justify-between gap-3">
+                            {/* Status Badge - Upper Left */}
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} flex-shrink-0`}>
+                              <span>{statusConfig.icon}</span>
+                              <span className="hidden sm:inline">{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                            </span>
+                            
+                            {/* Service Type - Right Side */}
+                            <div className="flex items-center gap-2 text-right flex-shrink-0">
+                              <span className="text-lg">{serviceIcon}</span>
+                              <span className="text-sm md:text-base font-semibold text-gray-700 hidden sm:inline">{VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}</span>
                             </div>
-
-                            {/* Customer Name */}
-                            <h3 className="text-xl md:text-2xl font-bold text-hvac-darkgray mb-2 break-words leading-tight">
-                              {booking.customerName}
-                            </h3>
-
-                            {/* Service Type with Icon */}
-                            <div className="flex items-center gap-2 text-base md:text-lg font-semibold text-hvac-darkgray">
-                              <span className="text-xl">{serviceIcon}</span>
-                              <span>{VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}</span>
-                            </div>
-
-                            {/* Date & Time */}
-                            <p className="text-sm md:text-base text-gray-600 mt-2">
-                              📅 {formatDate(booking.date)} at {booking.preferredTime}
-                            </p>
                           </div>
 
-                          {/* Expand Icon */}
-                          <div className="flex-shrink-0 text-2xl text-gray-400">
-                            {isExpanded ? '▼' : '▶'}
+                          {/* Second Row: Large Customer Name */}
+                          <h3 className="text-2xl md:text-3xl font-bold text-hvac-darkgray break-words leading-tight">
+                            {booking.customerName}
+                          </h3>
+
+                          {/* Third Row: Date + Time */}
+                          <p className="text-base md:text-lg text-gray-700 font-medium">
+                            📅 {formatDate(booking.date)} • {booking.preferredTime}
+                          </p>
+
+                          {/* Fourth Row: Address + Google Maps Button */}
+                          <div className="flex items-start gap-3">
+                            <div className="flex-grow min-w-0">
+                              <p className="text-base text-gray-700 font-medium truncate">
+                                📍 {booking.serviceAddress}
+                              </p>
+                            </div>
+                            <a
+                              href={`https://maps.google.com/?q=${encodeURIComponent(booking.serviceAddress)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="View on Google Maps"
+                            >
+                              🗺️
+                            </a>
                           </div>
-                        </button>
+
+                          {/* Fifth Row: Status Menu + Expand Button */}
+                          <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                              className="flex-grow px-4 py-2.5 text-base font-semibold text-hvac-darkgray hover:bg-gray-50 rounded-lg transition-colors touch-manipulation"
+                            >
+                              {isExpanded ? '▼ Details' : '▶ Details'}
+                            </button>
+
+                            {/* Status Management Menu (⋯) - Hidden Menu */}
+                            <div className="relative group">
+                              <button
+                                onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
+                                className="px-3 py-2.5 text-xl font-bold hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                                title="Status options"
+                              >
+                                ⋯
+                              </button>
+                              
+                              {/* Dropdown Menu */}
+                              {openMenuId === booking.id && (
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white border-2 border-gray-300 rounded-xl shadow-lg z-40">
+                                  <div className="p-2 space-y-1">
+                                    {['pending', 'confirmed', 'in-progress', 'completed', 'no-show', 'cancelled'].map(status => (
+                                      <button
+                                        key={status}
+                                        onClick={() => {
+                                          handleVoiceBookingStatusChange(booking.id, status)
+                                          setOpenMenuId(null)
+                                        }}
+                                        className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all touch-manipulation ${
+                                          booking.status === status
+                                            ? 'bg-purple-600 text-white'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                      >
+                                        {statusColorMap[status as keyof typeof statusColorMap]?.icon} {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
                         {/* Expandable Details */}
                         {isExpanded && (
@@ -585,19 +747,21 @@ export default function AdminBookings() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Phone</p>
-                                  <p className="text-lg md:text-xl font-bold text-hvac-darkgray font-mono break-all">{booking.customerPhone}</p>
+                                  <a href={`tel:${booking.customerPhone}`} className="text-base text-blue-600 hover:underline font-medium">
+                                    {booking.customerPhone}
+                                  </a>
                                 </div>
 
                                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Email</p>
-                                  <p className="text-sm md:text-base font-medium text-hvac-darkgray truncate">{booking.customerEmail || 'N/A'}</p>
+                                  {booking.customerEmail ? (
+                                    <a href={`mailto:${booking.customerEmail}`} className="text-base text-blue-600 hover:underline font-medium break-all">
+                                      {booking.customerEmail}
+                                    </a>
+                                  ) : (
+                                    <p className="text-base text-gray-500">Not provided</p>
+                                  )}
                                 </div>
-                              </div>
-
-                              {/* Service Address */}
-                              <div className="bg-white rounded-xl p-4 border border-gray-200">
-                                <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Service Address</p>
-                                <p className="text-base md:text-lg font-medium text-hvac-darkgray">{booking.serviceAddress}</p>
                               </div>
 
                               {/* Notes if available */}
@@ -627,31 +791,21 @@ export default function AdminBookings() {
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Quick Action Buttons */}
                             <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-3 bg-white">
-                              <select
-                                value={booking.status}
-                                onChange={(e) => handleVoiceBookingStatusChange(booking.id, e.target.value)}
-                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 bg-white hover:border-gray-400 transition-colors cursor-pointer min-h-[44px]"
-                              >
-                                <option value="pending">⏱ Mark as Pending</option>
-                                <option value="confirmed">✓ Mark as Confirmed</option>
-                                <option value="completed">✓✓ Mark as Completed</option>
-                                <option value="no-show">✗ Mark as No-Show</option>
-                                <option value="cancelled">⊘ Mark as Cancelled</option>
-                              </select>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <button
+                                  className="px-4 py-3 md:py-3.5 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md min-h-[44px]"
+                                >
+                                  📞 Call Customer
+                                </button>
 
-                              <button
-                                className="w-full px-4 py-4 md:py-4 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md min-h-[44px]"
-                              >
-                                📞 Call Customer
-                              </button>
-
-                              <button
-                                className="w-full px-4 py-3 md:py-3.5 text-base font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all min-h-[44px]"
-                              >
-                                📄 View Full Details
-                              </button>
+                                <button
+                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all min-h-[44px]"
+                                >
+                                  📝 Notes
+                                </button>
+                              </div>
                             </div>
                           </>
                         )}
