@@ -413,4 +413,25 @@ export async function sendContractorStatusUpdateSMS(
   }
 }
 
+/**
+ * Send contractor assignment SMS
+ */
+export async function sendContractorAssignmentSMS(
+  contractorPhone: string,
+  customerName: string,
+  address: string,
+  date: string,
+  time: string,
+  bookingId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const messageBody = `You have been assigned: ${customerName} at ${address} on ${date} at ${time}. Please confirm receipt.`
+
+  return sendSMS({
+    recipientPhone: contractorPhone,
+    messageBody,
+    messageType: 'contractor_assignment',
+    bookingId,
+  })
+}
+
 export { TEAM_MEMBERS }
