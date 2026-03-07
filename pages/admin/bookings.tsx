@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { SAMPLE_BOOKINGS } from '@/lib/bookingData'
 import { SAMPLE_VOICE_BOOKINGS, VoiceBooking, VOICE_SERVICE_TYPES } from '@/lib/voiceBookingData'
 import { getStatusColor, formatDate, formatCurrency, getHoursUntilAppointment } from '@/lib/bookingManagement'
+import { CONTRACTORS, getContractorById } from '@/lib/contractors'
 
 interface Booking {
   id: string
@@ -21,14 +22,15 @@ interface Booking {
   assignedTo?: string
   contractor_assigned?: string
   progression_path?: 'progressed' | 'not_progressed'
+  sms_sent_statuses?: string[] // Track which statuses have had SMS sent to prevent duplicates
 }
 
 // Hardcoded team members for colleague assignment
 const TEAM_MEMBERS = [
-  { id: 'tm1', name: 'John Smith', role: 'Lead Technician' },
-  { id: 'tm2', name: 'Sarah Johnson', role: 'Technician' },
-  { id: 'tm3', name: 'Mike Davis', role: 'Technician' },
-  { id: 'tm4', name: 'Lisa Chen', role: 'Service Manager' }
+  { id: 'tm1', name: 'John Smith', role: 'Lead Technician', phone: '+14155552671' },
+  { id: 'tm2', name: 'Sarah Johnson', role: 'Technician', phone: '+14155552672' },
+  { id: 'tm3', name: 'Mike Davis', role: 'Technician', phone: '+14155552673' },
+  { id: 'tm4', name: 'Lisa Chen', role: 'Service Manager', phone: '+14155552674' }
 ]
 
 // Status badge color map
@@ -73,6 +75,10 @@ export default function AdminBookings() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
   const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
+  const [smsState, setSmsState] = useState<{ loading: boolean; error?: string; bookingId?: string } | null>(null)
+  const [smsHistory, setSmsHistory] = useState<Record<string, any[]>>({})
+  const [loadingSMSHistory, setLoadingSMSHistory] = useState<Record<string, boolean>>({})
+  const [resendingSMS, setResendingSMS] = useState<Record<string, boolean>>({})
   
   // Helper function to get progress percentage for status
   const getProgressPercentage = (status: string) => {
@@ -106,10 +112,39 @@ export default function AdminBookings() {
       })
     : []
 
-  const handleStatusChange = (bookingId: string, newStatus: string) => {
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    const booking = bookings.find(b => b.id === bookingId)
+    if (!booking) return
+
+    // Update UI first
     setBookings(bookings.map(b => 
       b.id === bookingId ? { ...b, status: newStatus as any } : b
     ))
+
+    // Send SMS notifications for status changes
+    if (newStatus === 'in-progress') {
+      // Send customer SMS
+      await sendCustomerStatusUpdateSMS(
+        booking.customerPhone,
+        newStatus,
+        booking.customerAddress,
+        undefined,
+        booking.customerName,
+        bookingId
+      )
+    } else if (newStatus === 'completed' || newStatus === 'in-contractor-pipeline') {
+      // Send customer SMS for completion
+      if (newStatus === 'completed') {
+        await sendCustomerStatusUpdateSMS(
+          booking.customerPhone,
+          newStatus,
+          booking.customerAddress,
+          undefined,
+          booking.customerName,
+          bookingId
+        )
+      }
+    }
   }
 
   const handleInteractiveStatusChange = (bookingId: string, currentStatus: string) => {
@@ -167,10 +202,14 @@ export default function AdminBookings() {
     }
   }
 
-  const handleSelectContractor = (bookingId: string, contractorId: string) => {
+  const handleSelectContractor = async (bookingId: string, contractorId: string) => {
     const contractor = TEAM_MEMBERS.find(tm => tm.id === contractorId)
     if (!contractor) return
 
+    const booking = bookings.find(b => b.id === bookingId)
+    if (!booking) return
+
+    // Update UI first
     setBookings(bookings.map(b => 
       b.id === bookingId 
         ? { 
@@ -182,6 +221,87 @@ export default function AdminBookings() {
         : b
     ))
     setSelectContractorModal(null)
+
+    // Send SMS notification to contractor
+    const dashboardLink = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/admin/bookings`
+    await sendContractorAssignmentSMS(
+      contractor.phone,
+      booking.serviceType,
+      booking.customerName,
+      booking.customerAddress,
+      booking.date,
+      booking.time,
+      booking.customerPhone,
+      dashboardLink,
+      bookingId
+    )
+  }
+
+  /**
+   * Send SMS notification to contractor when assigned to a job
+   */
+  const sendContractorAssignmentSMS = async (
+    bookingId: string,
+    contractorId: string,
+    booking: Booking
+  ) => {
+    try {
+      setSmsState({ loading: true, bookingId })
+
+      const contractorData = getContractorById(contractorId)
+      if (!contractorData) {
+        throw new Error('Contractor not found')
+      }
+
+      // Format the appointment date and time
+      const appointmentDate = formatDate(booking.date)
+      const appointmentTime = booking.time
+
+      // Get the dashboard link
+      const dashboardLink = `${window.location.origin}/admin/bookings`
+
+      // Construct the SMS message
+      const messageBody = `New job assigned: ${booking.serviceType.replace('-', ' ')} for ${booking.customerName} at ${booking.customerAddress} on ${appointmentDate} ${appointmentTime}. Customer: ${booking.customerPhone}. Dashboard: ${dashboardLink}`
+
+      // Call the SMS API
+      const response = await fetch('/api/sms/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientPhone: contractorData.phone,
+          messageBody,
+          messageType: 'contractor_assignment',
+          bookingId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send SMS')
+      }
+
+      // SMS sent successfully
+      setSmsState({ loading: false, bookingId })
+      
+      // Show success message briefly
+      setTimeout(() => {
+        setSmsState(null)
+      }, 3000)
+
+      console.log(`✅ SMS sent to ${contractorData.name}: ${messageBody}`)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send SMS'
+      console.error(`❌ Error sending SMS: ${errorMessage}`)
+      setSmsState({ loading: false, error: errorMessage, bookingId })
+      
+      // Clear error after 5 seconds
+      setTimeout(() => {
+        setSmsState(null)
+      }, 5000)
+    }
   }
 
   const handleAssignColleague = (bookingId: string, colleagueId: string) => {
@@ -214,10 +334,36 @@ export default function AdminBookings() {
     setTouchStart(null)
   }
 
-  const handleVoiceBookingStatusChange = (bookingId: string, newStatus: string) => {
+  const handleVoiceBookingStatusChange = async (bookingId: string, newStatus: string) => {
+    const voiceBooking = voiceBookings.find(b => b.id === bookingId)
+    if (!voiceBooking) return
+
     setVoiceBookings(voiceBookings.map(b => 
       b.id === bookingId ? { ...b, status: newStatus as any } : b
     ))
+
+    // Send SMS notifications for status changes
+    if (newStatus === 'in-progress') {
+      // Send customer SMS
+      await sendCustomerStatusUpdateSMS(
+        voiceBooking.customerPhone,
+        newStatus,
+        voiceBooking.serviceAddress,
+        undefined,
+        voiceBooking.customerName,
+        bookingId
+      )
+    } else if (newStatus === 'completed') {
+      // Send customer SMS for completion
+      await sendCustomerStatusUpdateSMS(
+        voiceBooking.customerPhone,
+        newStatus,
+        voiceBooking.serviceAddress,
+        undefined,
+        voiceBooking.customerName,
+        bookingId
+      )
+    }
   }
 
   const handleRefund = async (bookingId: string) => {
@@ -512,6 +658,14 @@ export default function AdminBookings() {
                         </a>
                       </div>
 
+                      {/* Contractor Assignment Display */}
+                      {booking.contractor_assigned && (
+                        <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-300">
+                          <p className="text-xs uppercase tracking-wider font-semibold text-indigo-700 mb-1">👤 Contractor Assigned</p>
+                          <p className="text-base font-bold text-indigo-900">{booking.contractor_assigned}</p>
+                        </div>
+                      )}
+
                       {/* Fifth Row: Status Menu on Right + Expand Button */}
                       <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
                         <button
@@ -693,6 +847,14 @@ export default function AdminBookings() {
                             </a>
                           </div>
 
+                          {/* Contractor Assignment Display (Voice bookings) */}
+                          {(booking as any).contractor_assigned && (
+                            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-300">
+                              <p className="text-xs uppercase tracking-wider font-semibold text-indigo-700 mb-1">👤 Contractor Assigned</p>
+                              <p className="text-base font-bold text-indigo-900">{(booking as any).contractor_assigned}</p>
+                            </div>
+                          )}
+
                           {/* Fifth Row: Status Menu + Expand Button */}
                           <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
                             <button
@@ -789,6 +951,26 @@ export default function AdminBookings() {
                                   ></div>
                                 </div>
                               </div>
+
+                              {/* SMS History Section */}
+                              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-xs uppercase tracking-wider font-semibold text-green-900">📱 SMS Status</p>
+                                  {loadingSMSHistory[booking.id] && <span className="text-xs text-green-600">Loading...</span>}
+                                </div>
+                                {smsHistory[booking.id] && smsHistory[booking.id].length > 0 ? (
+                                  <div className="space-y-2">
+                                    <p className="text-sm text-green-700 font-medium">
+                                      ✅ Last SMS sent: {new Date(smsHistory[booking.id][0].sent_at).toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-green-600 italic">
+                                      {smsHistory[booking.id][0].message_type.replace(/_/g, ' ').toUpperCase()}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-green-700">No SMS sent yet</p>
+                                )}
+                              </div>
                             </div>
 
                             {/* Quick Action Buttons */}
@@ -798,6 +980,45 @@ export default function AdminBookings() {
                                   className="px-4 py-3 md:py-3.5 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md min-h-[44px]"
                                 >
                                   📞 Call Customer
+                                </button>
+
+                                <button
+                                  onClick={async () => {
+                                    setResendingSMS({ ...resendingSMS, [booking.id]: true })
+                                    try {
+                                      const result = await (await import('@/lib/smsHelper')).resendBookingConfirmationSMS(
+                                        booking.customerName,
+                                        booking.serviceType,
+                                        booking.preferredTime,
+                                        booking.serviceAddress,
+                                        booking.customerPhone,
+                                        booking.id
+                                      )
+                                      if (result.success) {
+                                        console.log('✅ SMS resent successfully')
+                                        // Refresh SMS history
+                                        const logsResult = await (await import('@/lib/smsHelper')).fetchSMSLogsForBooking(booking.id)
+                                        if (logsResult.success) {
+                                          setSmsHistory({ ...smsHistory, [booking.id]: logsResult.data || [] })
+                                        }
+                                      } else {
+                                        console.error('❌ Failed to resend SMS:', result.error)
+                                      }
+                                    } finally {
+                                      setResendingSMS({ ...resendingSMS, [booking.id]: false })
+                                    }
+                                  }}
+                                  disabled={resendingSMS[booking.id]}
+                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-green-50 border-2 border-green-300 text-green-700 rounded-xl hover:bg-green-100 active:bg-green-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                                >
+                                  {resendingSMS[booking.id] ? '⏳ Sending...' : '💬 Resend SMS'}
+                                </button>
+
+                                <button
+                                  onClick={() => setSelectContractorModal({ bookingId: booking.id })}
+                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-indigo-50 border-2 border-indigo-300 text-indigo-700 rounded-xl hover:bg-indigo-100 active:bg-indigo-200 transition-all min-h-[44px]"
+                                >
+                                  👤 Assign Contractor
                                 </button>
 
                                 <button
@@ -1114,22 +1335,53 @@ export default function AdminBookings() {
               <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">👤 Assign to Contractor</h2>
               <p className="text-lg text-gray-700 mb-6">Select a contractor for this job:</p>
 
+              {/* SMS Status Messages */}
+              {smsState?.bookingId === selectContractorModal.bookingId && (
+                <div className={`mb-6 p-4 rounded-xl border-2 ${
+                  smsState.error
+                    ? 'bg-red-50 border-red-300'
+                    : 'bg-green-50 border-green-300'
+                }`}>
+                  {smsState.loading ? (
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin">⏳</div>
+                      <p className="text-sm font-semibold text-gray-700">Sending SMS notification...</p>
+                    </div>
+                  ) : smsState.error ? (
+                    <p className="text-sm font-semibold text-red-700">⚠️ {smsState.error}</p>
+                  ) : (
+                    <p className="text-sm font-semibold text-green-700">✅ SMS sent to contractor!</p>
+                  )}
+                </div>
+              )}
+
               <div className="mb-6 space-y-3 max-h-64 overflow-y-auto">
-                {TEAM_MEMBERS.map(contractor => (
+                {CONTRACTORS.map(contractor => (
                   <button
                     key={contractor.id}
                     onClick={() => handleSelectContractor(selectContractorModal.bookingId, contractor.id)}
-                    className="w-full p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 active:from-indigo-200 active:to-indigo-300 rounded-xl border-2 border-indigo-300 transition-all text-left touch-manipulation"
+                    disabled={smsState?.loading}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left touch-manipulation ${
+                      smsState?.loading
+                        ? 'bg-gray-50 border-gray-300 cursor-not-allowed opacity-50'
+                        : 'bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 active:from-indigo-200 active:to-indigo-300 border-indigo-300'
+                    }`}
                   >
                     <p className="text-lg font-bold text-indigo-900">{contractor.name}</p>
                     <p className="text-sm text-indigo-700">{contractor.role}</p>
+                    <p className="text-xs text-indigo-600 mt-1">📱 {contractor.phone}</p>
                   </button>
                 ))}
               </div>
 
               <button
                 onClick={() => setSelectContractorModal(null)}
-                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation"
+                disabled={smsState?.loading}
+                className={`w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 transition-all touch-manipulation ${
+                  smsState?.loading
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
                 Cancel
               </button>

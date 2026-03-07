@@ -71,6 +71,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn('⚠️ Failed to store booking in Supabase, but continuing with confirmation:', bookingResult.error)
     } else {
       console.log('✅ Booking stored in voice_bookings table')
+
+      // Send customer confirmation SMS
+      try {
+        const smsMessage = `Hi ${customerName}, your ${serviceType} appointment is confirmed for ${preferredTime}. We'll see you at ${serviceAddress}. Reply STOP to opt out.`
+        
+        const smsResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/sms/send-sms`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientPhone: customerPhone,
+              messageBody: smsMessage,
+              messageType: 'customer_confirmation',
+              bookingId: bookingResult.data?.[0]?.id,
+            }),
+          }
+        )
+
+        const smsResult = await smsResponse.json()
+        if (smsResult.success) {
+          console.log('✅ Customer confirmation SMS sent')
+        } else {
+          console.warn('⚠️ Failed to send customer SMS:', smsResult.error)
+        }
+      } catch (smsError) {
+        console.warn('⚠️ Error sending customer SMS:', smsError)
+        // Don't break the flow if SMS fails
+      }
     }
 
     // Mark call state as completed

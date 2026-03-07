@@ -205,3 +205,255 @@ export async function cleanupOldCallStates() {
     }
   }
 }
+
+export interface SMSLog {
+  recipient_phone: string
+  message_body: string
+  message_type: 'customer_confirmation' | 'contractor_assignment' | 'status_update' | 'customer_status_update'
+  booking_id?: string
+  contractor_id?: string
+  twilio_message_sid?: string
+  sent_at: string
+  status: 'sent' | 'failed' | 'bounced'
+  error_message?: string
+}
+
+/**
+ * Log SMS to database for tracking and auditing
+ */
+export async function logSMS(smsData: SMSLog) {
+  try {
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .insert([
+        {
+          recipient_phone: smsData.recipient_phone,
+          message_body: smsData.message_body,
+          message_type: smsData.message_type,
+          booking_id: smsData.booking_id || null,
+          contractor_id: smsData.contractor_id || null,
+          twilio_message_sid: smsData.twilio_message_sid || null,
+          sent_at: smsData.sent_at,
+          status: smsData.status,
+          error_message: smsData.error_message || null,
+        },
+      ])
+      .select()
+
+    if (error) {
+      console.error('❌ Error logging SMS:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    console.log('✅ SMS logged to database:', data)
+    return { success: true, error: null, data: data?.[0] }
+  } catch (error) {
+    console.error('Error logging SMS:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
+
+/**
+ * Check rate limiting for SMS (max 1 per booking per status change)
+ */
+export async function checkRateLimit(
+  bookingId: string,
+  messageType: string
+): Promise<{ success: boolean; error?: string; data?: boolean }> {
+  try {
+    // Get the last SMS sent for this booking with this message type in the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .eq('message_type', messageType)
+      .eq('status', 'sent')
+      .gte('sent_at', oneHourAgo)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+
+    if (error) {
+      console.error('❌ Error checking rate limit:', error)
+      // If we can't check, allow the SMS to proceed
+      return { success: true, data: true }
+    }
+
+    // If no recent SMS found, allow sending
+    if (!data || data.length === 0) {
+      return { success: true, data: true }
+    }
+
+    // SMS was recently sent, rate limited
+    return { success: true, data: false }
+  } catch (error) {
+    console.error('Error checking rate limit:', error)
+    // If we can't check, allow the SMS to proceed
+    return { success: true, data: true }
+  }
+}
+
+/**
+ * Retrieve SMS history for a specific booking
+ */
+export async function getSMSHistoryForBooking(bookingId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('sent_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error retrieving SMS history for booking:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    console.log(`✅ Retrieved ${data?.length || 0} SMS records for booking ${bookingId}`)
+    return { success: true, error: null, data: data || [] }
+  } catch (error) {
+    console.error('Error retrieving SMS history:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
+
+/**
+ * Retrieve SMS history for a specific contractor
+ */
+export async function getSMSHistoryForContractor(contractorId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .select('*')
+      .eq('contractor_id', contractorId)
+      .order('sent_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error retrieving SMS history for contractor:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    console.log(`✅ Retrieved ${data?.length || 0} SMS records for contractor ${contractorId}`)
+    return { success: true, error: null, data: data || [] }
+  } catch (error) {
+    console.error('Error retrieving SMS history:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
+
+/**
+ * Retrieve SMS history for a specific phone number
+ */
+export async function getSMSHistoryForPhoneNumber(phoneNumber: string) {
+  try {
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .select('*')
+      .eq('recipient_phone', phoneNumber)
+      .order('sent_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error retrieving SMS history for phone number:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    console.log(`✅ Retrieved ${data?.length || 0} SMS records for phone number ${phoneNumber}`)
+    return { success: true, error: null, data: data || [] }
+  } catch (error) {
+    console.error('Error retrieving SMS history:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
+
+/**
+ * Get SMS statistics for a booking
+ */
+export async function getSMSStatistics(bookingId?: string, days: number = 30) {
+  try {
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+    let query = supabase
+      .from('sms_logs')
+      .select('status, message_type')
+      .gte('sent_at', startDate)
+
+    if (bookingId) {
+      query = query.eq('booking_id', bookingId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('❌ Error retrieving SMS statistics:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    // Calculate statistics
+    const stats = {
+      total: data?.length || 0,
+      sent: data?.filter(log => log.status === 'sent').length || 0,
+      failed: data?.filter(log => log.status === 'failed').length || 0,
+      bounced: data?.filter(log => log.status === 'bounced').length || 0,
+      byType: {
+        customer_confirmation: data?.filter(log => log.message_type === 'customer_confirmation').length || 0,
+        contractor_assignment: data?.filter(log => log.message_type === 'contractor_assignment').length || 0,
+        status_update: data?.filter(log => log.message_type === 'status_update').length || 0,
+        customer_status_update: data?.filter(log => log.message_type === 'customer_status_update').length || 0,
+      },
+    }
+
+    console.log(`✅ SMS Statistics (last ${days} days):`, stats)
+    return { success: true, error: null, data: stats }
+  } catch (error) {
+    console.error('Error retrieving SMS statistics:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
+
+/**
+ * Get SMS logs for a specific booking
+ */
+export async function getSMSLogsForBooking(bookingId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('sms_logs')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('sent_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error fetching SMS logs:', error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    return { success: true, error: null, data: data || [] }
+  } catch (error) {
+    console.error('Error fetching SMS logs:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+    }
+  }
+}
