@@ -21,17 +21,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log(`👤 User requesting human representative`)
       response.say({
         engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
-      }, 'Please stand by while we connect you to one of our team managers.')
-      response.pause({ length: 2 })
-      
-      // Keep them on hold with hold messages
-      response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
-      }, 'Please hold. We are connecting you to a manager. Your call is important to us.')
-      response.pause({ length: 12 })
-      response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
-      }, 'A manager will call you back shortly. Thank you for your patience. Goodbye.')
+      }, 'Stand by while I connect you to a manager. Your call is important to us. A manager will call you back shortly.')
+      response.pause({ length: 5 })
       response.hangup()
       
       res.status(200)
