@@ -81,6 +81,39 @@ export default function AdminBookings() {
   const [loadingSMSHistory, setLoadingSMSHistory] = useState<Record<string, boolean>>({})
   const [resendingSMS, setResendingSMS] = useState<Record<string, boolean>>({})
   
+  // Load real voice bookings from Supabase
+  useEffect(() => {
+    const fetchVoiceBookings = async () => {
+      try {
+        const response = await fetch('/api/admin/voice-bookings')
+        const data = await response.json()
+        
+        if (data.success && data.bookings) {
+          // Convert Supabase data to VoiceBooking format
+          const convertedBookings = data.bookings.map((booking: any) => ({
+            id: booking.id,
+            call_sid: booking.call_sid,
+            serviceType: booking.service_type || 'AC repair',
+            customerName: booking.customer_name || 'Unknown',
+            customerPhone: booking.customer_phone || '',
+            serviceAddress: booking.service_address || '',
+            preferredTime: booking.preferred_time || '',
+            date: new Date(booking.created_at).toISOString().split('T')[0],
+            status: 'pending' as const,
+            customerEmail: '',
+            notes: ''
+          }))
+          
+          setVoiceBookings(convertedBookings)
+        }
+      } catch (error) {
+        console.error('Failed to fetch voice bookings:', error)
+      }
+    }
+    
+    fetchVoiceBookings()
+  }, [])
+  
   // Helper function to get progress percentage for status
   const getProgressPercentage = (status: string) => {
     const progression = { pending: 25, confirmed: 50, 'in-progress': 75, completed: 100 }
