@@ -1259,28 +1259,46 @@ export default function AdminBookings() {
                       <h2 className="text-2xl font-bold text-hvac-darkgray mb-1">
                         📅 {formatDate(selectedDate)}
                       </h2>
-                      <p className="text-sm text-gray-600">
-                        {dayViewBookings.length} appointment{dayViewBookings.length !== 1 ? 's' : ''} scheduled
-                      </p>
+                      {(() => {
+                        const webCount = dayViewBookings.length
+                        const voiceCount = filteredVoiceBookings.filter(b => b.date === selectedDate && b.status !== 'pending').length
+                        const total = webCount + voiceCount
+                        return (
+                          <p className="text-sm text-gray-600">
+                            {total} appointment{total !== 1 ? 's' : ''} scheduled
+                          </p>
+                        )
+                      })()}
                     </div>
 
-                    {dayViewBookings.length > 0 ? (
+                    {(() => {
+                      const webJobs = dayViewBookings
+                      const voiceJobs = filteredVoiceBookings.filter(b => b.date === selectedDate && b.status !== 'pending')
+                      const allJobs = [
+                        ...webJobs.map(b => ({ ...b, source: 'web' as const })),
+                        ...voiceJobs.map(b => ({ ...b, source: 'voice' as const }))
+                      ].sort((a, b) => (a.time || a.preferredTime || '').localeCompare(b.time || b.preferredTime || ''))
+                      
+                      return allJobs.length > 0 ? (
                       <div className="space-y-3">
-                        {dayViewBookings.map(booking => {
+                        {allJobs.map((booking: any) => {
                           const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
                           const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
+                          const isVoice = booking.source === 'voice'
                           
-                          return (
+                            return (
                             <div
-                              key={booking.id}
-                              className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all"
+                              key={`${booking.source}-${booking.id}`}
+                              className={`rounded-lg border p-4 shadow-sm hover:shadow-md transition-all ${isVoice ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-200'}`}
                             >
                               {/* Header - Time, Name, Status */}
                               <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="flex-grow min-w-0">
-                                  <p className="text-xs text-gray-600 font-semibold">⏰ {booking.time}</p>
+                                  <p className="text-xs text-gray-600 font-semibold">⏰ {booking.time || booking.preferredTime}</p>
                                   <h4 className="text-lg font-bold text-hvac-darkgray truncate">{booking.customerName}</h4>
-                                  <p className="text-sm text-gray-600">{serviceIcon} {booking.serviceType.replace('-', ' ')}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {isVoice ? '🎤' : serviceIcon} {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType.replace('-', ' ')}
+                                  </p>
                                 </div>
                                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
                                   <span>{statusConfig.icon}</span>
@@ -1288,16 +1306,17 @@ export default function AdminBookings() {
                               </div>
 
                               {/* Address & Contractor */}
-                              <div className="bg-gray-50 rounded p-2 mb-3 text-xs space-y-1">
-                                <p className="text-gray-600 font-semibold">📍 {booking.customerAddress}</p>
+                              <div className={`rounded p-2 mb-3 text-xs space-y-1 ${isVoice ? 'bg-purple-100' : 'bg-gray-50'}`}>
+                                <p className={`font-semibold ${isVoice ? 'text-purple-900' : 'text-gray-600'}`}>📍 {booking.serviceAddress || booking.customerAddress}</p>
                                 {booking.contractor_assigned && (
                                   <p className="text-indigo-700 font-semibold">👤 {booking.contractor_assigned}</p>
                                 )}
+                                {isVoice && <p className="text-xs text-purple-700">Voice Booking</p>}
                               </div>
 
                               {/* Quick Actions - Compact */}
-                              <div className="flex gap-2">
-                                {booking.status === 'pending' && (
+                              <div className="flex gap-2 flex-wrap">
+                                {booking.status === 'pending' && !isVoice && (
                                   <button
                                     onClick={() => handleStatusChange(booking.id, 'confirmed')}
                                     className="flex-1 px-2 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs font-bold transition-all"
@@ -1307,7 +1326,7 @@ export default function AdminBookings() {
                                 )}
                                 {booking.status === 'confirmed' && (
                                   <button
-                                    onClick={() => handleStatusChange(booking.id, 'in-progress')}
+                                    onClick={() => isVoice ? handleVoiceBookingStatusChange(booking.id, 'in-progress') : handleStatusChange(booking.id, 'in-progress')}
                                     className="flex-1 px-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-bold transition-all"
                                   >
                                     ➜ Start
@@ -1322,22 +1341,24 @@ export default function AdminBookings() {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
+                                  onClick={() => isVoice ? setSelectContractorModal({ bookingId: booking.id }) : setAssignColleagueModal({ bookingId: booking.id })}
                                   className="flex-1 px-2 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded text-xs font-bold transition-all"
                                 >
                                   👤 Assign
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedBooking(booking)
-                                    setRefundAmount(145)
-                                    setRefundModalOpen(true)
-                                  }}
-                                  className="px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-all"
-                                  title="Refund"
-                                >
-                                  💰
-                                </button>
+                                {!isVoice && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedBooking(booking)
+                                      setRefundAmount(145)
+                                      setRefundModalOpen(true)
+                                    }}
+                                    className="px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-all"
+                                    title="Refund"
+                                  >
+                                    💰
+                                  </button>
+                                )}
                               </div>
                           </div>
                         )
@@ -1349,6 +1370,8 @@ export default function AdminBookings() {
                         <p className="font-bold text-gray-700">No appointments</p>
                         <p className="text-sm text-gray-600">for this date</p>
                       </div>
+                    )}
+                    </>
                     )}
                   </div>
                 ) : (
