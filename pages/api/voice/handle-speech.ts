@@ -24,11 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, 'Please stand by while we connect you to one of our team managers.')
       response.pause({ length: 2 })
       
-      // Play hold music (using a royalty-free Mexican-style music URL)
-      // Looping mariachi-style music while waiting for representative
+      // Play hold music on a loop while waiting
+      // Using Twilio's demo hold music
       response.play({
-        loop: 0  // infinite loop
-      } as any, 'https://cdn.pixabay.com/download/audio/2024/03/20/audio-c5b97e6a67.mp3?filename=mexico-130745.mp3')
+        loop: 10  // loop 10 times (~ 5 minutes)
+      } as any, 'http://demo.twilio.com/docs/voice.mp3')
       
       res.status(200)
       res.setHeader('Content-Type', 'application/xml')
