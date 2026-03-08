@@ -898,63 +898,54 @@ export default function AdminBookings() {
                     return (
                       <div
                         key={booking.id}
-                        className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
+                        className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
                       >
-                        {/* Card Header - New Hierarchy (Voice variant) */}
-                        <div className="px-5 md:px-7 py-5 md:py-6 space-y-4">
-                          {/* First Row: Status Badge (left) + Service Type (center-right) */}
-                          <div className="flex items-center justify-between gap-3">
-                            {/* Status Badge - Upper Left */}
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} flex-shrink-0`}>
-                              <span>{statusConfig.icon}</span>
-                              <span className="hidden sm:inline">{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
-                            </span>
-                            
-                            {/* Service Type - Right Side */}
-                            <div className="flex items-center gap-2 text-right flex-shrink-0">
-                              <span className="text-lg">{serviceIcon}</span>
-                              <span className="text-sm md:text-base font-semibold text-gray-700 hidden sm:inline">{VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}</span>
+                        {/* Card Header - Compact */}
+                        <div className="px-4 py-3 space-y-2">
+                          {/* Status + Service Type + Name Row */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-grow min-w-0">
+                              <h3 className="text-lg font-bold text-hvac-darkgray truncate">
+                                {booking.customerName}
+                              </h3>
                             </div>
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap flex-shrink-0 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                              <span>{statusConfig.icon}</span>
+                            </span>
                           </div>
 
-                          {/* Second Row: Large Customer Name */}
-                          <h3 className="text-2xl md:text-3xl font-bold text-hvac-darkgray break-words leading-tight">
-                            {booking.customerName}
-                          </h3>
+                          {/* Date + Time + Service Type Row */}
+                          <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+                            <span>📅 {formatDate(booking.date)}</span>
+                            <span>•</span>
+                            <span>⏰ {booking.preferredTime}</span>
+                            <span>•</span>
+                            <span>{serviceIcon} {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType}</span>
+                          </div>
 
-                          {/* Third Row: Date + Time */}
-                          <p className="text-base md:text-lg text-gray-700 font-medium">
-                            📅 {formatDate(booking.date)} • {booking.preferredTime}
-                          </p>
-
-                          {/* Fourth Row: Address + Google Maps Button */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-grow min-w-0">
-                              <p className="text-base text-gray-700 font-medium truncate">
-                                📍 {booking.serviceAddress}
-                              </p>
-                            </div>
+                          {/* Address + Maps */}
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <span className="truncate flex-grow">📍 {booking.serviceAddress}</span>
                             <a
                               href={`https://maps.google.com/?q=${encodeURIComponent(booking.serviceAddress)}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              className="flex-shrink-0 hover:bg-gray-100 rounded p-1 transition-colors"
                               title="View on Google Maps"
                             >
                               🗺️
                             </a>
                           </div>
 
-                          {/* Contractor Assignment Display (Voice bookings) */}
+                          {/* Contractor Assignment Display */}
                           {(booking as any).contractor_assigned && (
-                            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-300">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-indigo-700 mb-1">👤 Contractor Assigned</p>
-                              <p className="text-base font-bold text-indigo-900">{(booking as any).contractor_assigned}</p>
+                            <div className="bg-indigo-50 rounded p-2 border border-indigo-200 text-xs">
+                              <p className="text-indigo-900 font-semibold">👤 {(booking as any).contractor_assigned}</p>
                             </div>
                           )}
 
-                          {/* Fifth Row: Status Menu + Expand Button */}
-                          <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                          {/* Action Buttons Row */}
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200">
                             <button
                               onClick={async () => {
                                 const newExpandedState = isExpanded ? null : booking.id
@@ -976,16 +967,16 @@ export default function AdminBookings() {
                                   }
                                 }
                               }}
-                              className="flex-grow px-4 py-2.5 text-base font-semibold text-hvac-darkgray hover:bg-gray-50 rounded-lg transition-colors touch-manipulation"
+                              className="px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 rounded transition-colors touch-manipulation"
                             >
-                              {isExpanded ? '▼ Details' : '▶ Details'}
+                              {isExpanded ? '▼' : '▶'} Details
                             </button>
 
-                            {/* Status Management Menu (⋯) - Hidden Menu */}
+                            {/* Status Management Menu (⋯) */}
                             <div className="relative group">
                               <button
                                 onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
-                                className="px-3 py-2.5 text-xl font-bold hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                                className="px-2 py-1.5 text-lg font-bold hover:bg-gray-100 rounded transition-colors touch-manipulation"
                                 title="Status options"
                               >
                                 ⋯
@@ -1051,24 +1042,6 @@ export default function AdminBookings() {
                                 </div>
                               )}
 
-                              {/* Call Status Progress */}
-                              <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="text-xs uppercase tracking-wider font-semibold text-purple-900">Call Status</p>
-                                  <span className="text-sm font-bold text-purple-700">{booking.status === 'completed' ? '100%' : booking.status === 'confirmed' ? '75%' : booking.status === 'pending' ? '25%' : '0%'}</span>
-                                </div>
-                                <div className="h-2 bg-white rounded-full overflow-hidden border border-purple-300">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-300"
-                                    style={{ 
-                                      width: booking.status === 'completed' ? '100%' : 
-                                             booking.status === 'confirmed' ? '75%' : 
-                                             booking.status === 'pending' ? '25%' : '0%'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-
                               {/* SMS History Section */}
                               <div className="bg-green-50 rounded-xl p-4 border border-green-200">
                                 <div className="flex items-center justify-between mb-3">
@@ -1091,12 +1064,12 @@ export default function AdminBookings() {
                             </div>
 
                             {/* Quick Action Buttons */}
-                            <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-3 bg-white">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 space-y-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <button
-                                  className="px-4 py-3 md:py-3.5 text-base font-bold bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 transition-all shadow-sm hover:shadow-md min-h-[44px]"
+                                  className="px-3 py-2 text-xs font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 transition-all min-h-[36px]"
                                 >
-                                  📞 Call Customer
+                                  📞 Call
                                 </button>
 
                                 <button
@@ -1113,33 +1086,30 @@ export default function AdminBookings() {
                                       )
                                       if (result.success) {
                                         console.log('✅ SMS resent successfully')
-                                        // Refresh SMS history
                                         const logsResult = await (await import('@/lib/smsHelper')).fetchSMSLogsForBooking(booking.id)
                                         if (logsResult.success) {
                                           setSmsHistory({ ...smsHistory, [booking.id]: logsResult.data || [] })
                                         }
-                                      } else {
-                                        console.error('❌ Failed to resend SMS:', result.error)
                                       }
                                     } finally {
                                       setResendingSMS({ ...resendingSMS, [booking.id]: false })
                                     }
                                   }}
                                   disabled={resendingSMS[booking.id]}
-                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-green-50 border-2 border-green-300 text-green-700 rounded-xl hover:bg-green-100 active:bg-green-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                                  className="px-3 py-2 text-xs font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-all disabled:opacity-50 min-h-[36px]"
                                 >
-                                  {resendingSMS[booking.id] ? '⏳ Sending...' : '💬 Resend SMS'}
+                                  {resendingSMS[booking.id] ? '⏳' : '💬'} SMS
                                 </button>
 
                                 <button
                                   onClick={() => setSelectContractorModal({ bookingId: booking.id })}
-                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-indigo-50 border-2 border-indigo-300 text-indigo-700 rounded-xl hover:bg-indigo-100 active:bg-indigo-200 transition-all min-h-[44px]"
+                                  className="px-3 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-all min-h-[36px]"
                                 >
-                                  👤 Assign Contractor
+                                  👤 Assign
                                 </button>
 
                                 <button
-                                  className="px-4 py-3 md:py-3.5 text-base font-semibold bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all min-h-[44px]"
+                                  className="px-3 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all min-h-[36px]"
                                 >
                                   📝 Notes
                                 </button>
