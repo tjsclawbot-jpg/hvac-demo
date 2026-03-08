@@ -30,11 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const twiml = new twilio.twiml.VoiceResponse()
       twiml.say({
-        voice: 'alice' as any,
+        voice: 'man' as any,
       }, 'Sorry, I did not get a valid phone number. Please try again.')
       twiml.pause({ length: 1 })
       twiml.say({
-        voice: 'alice' as any,
+        voice: 'man' as any,
       }, 'Please say your phone number, like 5 5 5 1 2 3 4.')
       
       const gather = twiml.gather({
@@ -70,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const twiml = new twilio.twiml.VoiceResponse()
 
     twiml.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, `Great! I got your number. Now I'll just need the address where you need service to connect you with the right service member. Could you please say your street address, city, and state.`)
     twiml.pause({ length: 1 })
 
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const twiml = new twilio.twiml.VoiceResponse()
     twiml.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, 'Sorry, an error occurred.')
     twiml.hangup()
     

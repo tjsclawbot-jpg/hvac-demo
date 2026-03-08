@@ -115,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const twiml = new twilio.twiml.VoiceResponse()
 
     twiml.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, `Perfect! I've booked your ${serviceType} appointment for ${preferredTime}. You'll receive a confirmation text at ${customerPhone}. Let me know if there is anything else I can help you with today, otherwise you'll get an appointment notification shortly`)
 
     const gather = twiml.gather({
@@ -136,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const twiml = new twilio.twiml.VoiceResponse()
     twiml.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, 'Sorry, I had trouble completing your booking. Our team will call you back shortly.')
     twiml.hangup()
     

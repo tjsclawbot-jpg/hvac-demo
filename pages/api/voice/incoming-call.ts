@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`[${timestamp}] Adding say verb`)
     response.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, `This is an automated scheduling service for ${companyName}. Are you calling about heating, AC, or an emergency service? If you'd prefer to speak with a representative, just say so and we'll have someone call you back at a scheduled time.`)
     response.pause({ length: 1 })
     

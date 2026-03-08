@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const twiml = new twilio.twiml.VoiceResponse()
     twiml.say({
-      voice: 'alice' as any,
+      voice: 'man' as any,
     }, 'Thank you for calling. Goodbye!')
     twiml.hangup()
 
