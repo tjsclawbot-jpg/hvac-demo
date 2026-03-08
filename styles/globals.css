@@ -75,6 +75,14 @@ button {
   @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
 }
 
+.container-max {
+  @apply max-w-6xl mx-auto;
+}
+
+.section-padding {
+  @apply px-4 sm:px-6 lg:px-8 py-8 md:py-12;
+}
+
 /* Typography */
 h1 {
   @apply text-5xl font-bold text-hvac-darkgray;

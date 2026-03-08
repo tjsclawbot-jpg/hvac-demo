@@ -1,31 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { Check, ArrowRight, Zap } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function Pricing() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="bg-hvac-darkgray border-b-4 border-hvac-orange sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition">
-              <span className="text-white font-bold text-lg">ProFlow HVAC</span>
-            </Link>
-            <div className="hidden md:flex gap-8 items-center">
-              <Link href="/faq" className="text-white hover:text-hvac-orange transition">FAQ</Link>
-              <Link href="/pricing" className="text-white hover:text-hvac-orange transition">Pricing</Link>
-            </div>
-            <Link href="/customer-demo" className="hidden md:block bg-hvac-yellow hover:bg-yellow-400 text-hvac-darkgray px-6 py-2 rounded-lg font-bold transition">
-              View Customer Demo
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white flex flex-col">
+      <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-hvac-orange to-orange-600 text-white px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-7xl mx-auto">
+      <section className="bg-gradient-to-r from-hvac-orange to-orange-600 text-white section-padding">
+        <div className="container-max">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Build and Own Your Lead Generation System — Custom Built for Busy HVAC Professionals in the DMV Area</h1>
           <p className="text-xl opacity-95 max-w-3xl mb-8">
             Launch your own professional booking & referral platform in 3 days. Generate more leads. Close more jobs. Simple pricing. Full ownership.
@@ -48,8 +34,8 @@ export default function Pricing() {
       </section>
 
       {/* Pricing Breakdown */}
-      <section className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-7xl mx-auto">
+      <section className="bg-gray-50 section-padding">
+        <div className="container-max">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-4">One-Time Setup + Monthly Support</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">Launch your white-labeled HVAC lead generation system. We handle setup, hosting, and ongoing support so you can focus on growing your business.</p>
@@ -251,8 +237,8 @@ export default function Pricing() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-hvac-darkgray text-white px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="bg-hvac-darkgray text-white section-padding">
+        <div className="container-max text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Generate More HVAC Leads?</h2>
           <p className="text-xl text-white font-semibold mb-10 max-w-2xl mx-auto">
             Launch your white-labeled booking system in 3 days. Start capturing leads and taking deposits immediately. No long-term contracts. Full ownership.
@@ -263,12 +249,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-hvac-darkgray border-t-4 border-hvac-orange py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-300 text-lg">&copy; 2026 ProFlow HVAC Solutions. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

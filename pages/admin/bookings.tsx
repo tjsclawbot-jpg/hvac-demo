@@ -516,8 +516,8 @@ export default function AdminBookings() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       <Header />
 
-      <main className="flex-grow w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="w-full max-w-6xl mx-auto">
+      <main className="flex-grow w-full">
+        <div className="container-max section-padding">
           {/* Page Header */}
           <div className="mb-10 md:mb-12">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-hvac-darkgray mb-3 leading-tight">Booking Management</h1>
