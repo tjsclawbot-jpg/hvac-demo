@@ -1275,9 +1275,12 @@ export default function AdminBookings() {
                                 </span>
                               </div>
 
-                              {/* Address & Phone */}
-                              <div className="bg-gray-50 rounded p-2 mb-3 text-xs">
+                              {/* Address & Contractor */}
+                              <div className="bg-gray-50 rounded p-2 mb-3 text-xs space-y-1">
                                 <p className="text-gray-600 font-semibold">📍 {booking.customerAddress}</p>
+                                {booking.contractor_assigned && (
+                                  <p className="text-indigo-700 font-semibold">👤 {booking.contractor_assigned}</p>
+                                )}
                               </div>
 
                               {/* Quick Actions - Compact */}
