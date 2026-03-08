@@ -1570,11 +1570,15 @@ export default function AdminBookings() {
       {/* Refund Modal */}
       {refundModalOpen && selectedBooking && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl">
-            <div className="px-5 md:px-7 py-8 md:py-10">
-              <h2 className="text-4xl md:text-5xl font-bold text-hvac-darkgray mb-8">Process Refund</h2>
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header - Fixed */}
+            <div className="px-5 md:px-7 py-6 md:py-8 flex-shrink-0">
+              <h2 className="text-4xl md:text-5xl font-bold text-hvac-darkgray">Process Refund</h2>
+            </div>
 
-              <div className="mb-8 space-y-4">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-5 md:px-7">
+              <div className="space-y-4 pb-4">
                 {/* Customer Info */}
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Customer</p>
@@ -1594,7 +1598,7 @@ export default function AdminBookings() {
                 </div>
 
                 {/* Refund Amount Selection */}
-                <div className="mt-6">
+                <div>
                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-700 mb-4">Select Refund Amount</p>
                   <div className="space-y-3">
                     {/* Option 1: With Fee */}
@@ -1635,9 +1639,11 @@ export default function AdminBookings() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
+            {/* Footer - Fixed */}
+            <div className="px-5 md:px-7 py-6 md:py-8 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-t-3xl md:rounded-b-2xl">
+              <div className="flex flex-col gap-3">
                 <button
                   onClick={() => setRefundModalOpen(false)}
                   className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
