@@ -101,7 +101,8 @@ export default function AdminBookings() {
             date: new Date(booking.created_at).toISOString().split('T')[0],
             status: 'pending' as const,
             customerEmail: '',
-            notes: ''
+            notes: '',
+            contractor_assigned: booking.contractor_assigned || undefined
           }))
           
           setVoiceBookings(convertedBookings)
@@ -315,36 +316,82 @@ export default function AdminBookings() {
   }
 
   const handleSelectContractor = async (bookingId: string, contractorId: string) => {
-    const contractor = TEAM_MEMBERS.find(tm => tm.id === contractorId)
+    const contractor = CONTRACTORS.find(c => c.id === contractorId)
     if (!contractor) return
 
-    const booking = bookings.find(b => b.id === bookingId)
-    if (!booking) return
+    // Check if this is a voice booking or web booking
+    const voiceBooking = voiceBookings.find(b => b.id === bookingId)
+    const webBooking = bookings.find(b => b.id === bookingId)
 
-    // Update UI first with contractor assignment
-    setBookings(bookings.map(b => 
-      b.id === bookingId 
-        ? { 
-            ...b, 
-            progression_path: 'progressed',
-            contractor_assigned: contractor.name 
-          } 
-        : b
-    ))
+    if (voiceBooking) {
+      // Handle voice booking - save to Supabase
+      try {
+        const response = await fetch('/api/admin/assign-contractor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId,
+            contractorName: contractor.name
+          })
+        })
 
-    // Change status to in-contractor-pipeline using handleStatusChange for SMS tracking
-    await handleStatusChange(bookingId, 'in-contractor-pipeline')
-    setSelectContractorModal(null)
+        const result = await response.json()
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to assign contractor')
+        }
 
-    // Send SMS notification to contractor
-    await sendContractorAssignmentSMS(
-      contractor.phone,
-      booking.customerName,
-      booking.customerAddress,
-      formatDate(booking.date),
-      booking.time,
-      bookingId
-    )
+        // Update local state
+        setVoiceBookings(voiceBookings.map(b =>
+          b.id === bookingId
+            ? { ...b, contractor_assigned: contractor.name }
+            : b
+        ))
+
+        // Update status to in-progress
+        handleVoiceBookingStatusChange(bookingId, 'in-progress')
+
+        setSelectContractorModal(null)
+
+        // Send SMS notification to contractor
+        const booking = voiceBooking
+        await sendContractorAssignmentSMS(
+          contractor.phone,
+          booking.customerName,
+          booking.serviceAddress,
+          formatDate(booking.date),
+          booking.preferredTime,
+          bookingId
+        )
+      } catch (error) {
+        console.error('Error assigning contractor:', error)
+        alert('Failed to assign contractor. Please try again.')
+      }
+    } else if (webBooking) {
+      // Handle web booking
+      setBookings(bookings.map(b =>
+        b.id === bookingId
+          ? {
+              ...b,
+              progression_path: 'progressed',
+              contractor_assigned: contractor.name
+            }
+          : b
+      ))
+
+      // Change status to in-contractor-pipeline using handleStatusChange for SMS tracking
+      await handleStatusChange(bookingId, 'in-contractor-pipeline')
+      setSelectContractorModal(null)
+
+      // Send SMS notification to contractor
+      await sendContractorAssignmentSMS(
+        contractor.phone,
+        webBooking.customerName,
+        webBooking.customerAddress,
+        formatDate(webBooking.date),
+        webBooking.time,
+        bookingId
+      )
+    }
   }
 
   /**
