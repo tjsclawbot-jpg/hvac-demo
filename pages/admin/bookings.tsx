@@ -76,6 +76,7 @@ export default function AdminBookings() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
   const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
+  const [selectedColleague, setSelectedColleague] = useState<string | null>(null)
   const [smsState, setSmsState] = useState<{ loading: boolean; error?: string; bookingId?: string } | null>(null)
   const [smsHistory, setSmsHistory] = useState<Record<string, any[]>>({})
   const [loadingSMSHistory, setLoadingSMSHistory] = useState<Record<string, boolean>>({})
@@ -1544,8 +1545,12 @@ export default function AdminBookings() {
                 {TEAM_MEMBERS.map(colleague => (
                   <button
                     key={colleague.id}
-                    onClick={() => handleAssignColleague(assignColleagueModal.bookingId, colleague.id)}
-                    className="w-full p-4 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 active:from-purple-200 active:to-purple-300 rounded-xl border-2 border-purple-300 transition-all text-left touch-manipulation min-h-[56px]"
+                    onClick={() => setSelectedColleague(colleague.id)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left touch-manipulation min-h-[56px] ${
+                      selectedColleague === colleague.id
+                        ? 'bg-purple-100 border-purple-600 ring-2 ring-purple-500'
+                        : 'bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-purple-300'
+                    }`}
                   >
                     <p className="text-lg font-bold text-purple-900">{colleague.name}</p>
                     <p className="text-sm text-purple-700">{colleague.role}</p>
@@ -1556,12 +1561,33 @@ export default function AdminBookings() {
 
             {/* Footer - Sticky */}
             <div className="px-5 md:px-7 py-6 md:py-8 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-t-3xl md:rounded-b-2xl">
-              <button
-                onClick={() => setAssignColleagueModal(null)}
-                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
-              >
-                Cancel
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    if (selectedColleague) {
+                      handleAssignColleague(assignColleagueModal.bookingId, selectedColleague)
+                      setSelectedColleague(null)
+                    }
+                  }}
+                  disabled={!selectedColleague}
+                  className={`w-full px-4 py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                    selectedColleague
+                      ? 'bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  Assign
+                </button>
+                <button
+                  onClick={() => {
+                    setAssignColleagueModal(null)
+                    setSelectedColleague(null)
+                  }}
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
