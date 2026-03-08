@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ArrowRight } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 interface FAQItem {
   question: string;
@@ -56,24 +58,8 @@ export default function FAQ() {
   const categories = Array.from(new Set(faqItems.map((item) => item.category)));
 
   return (
-    <div className="min-h-screen bg-hvac-light">
-      {/* Navigation */}
-      <nav className="bg-hvac-darkgray border-b-4 border-hvac-orange sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition">
-              <span className="text-white font-bold text-lg">ProFlow HVAC</span>
-            </Link>
-            <div className="hidden md:flex gap-8 items-center">
-              <Link href="/faq" className="text-hvac-orange font-semibold">FAQ</Link>
-              <Link href="/pricing" className="text-white hover:text-hvac-orange transition">Pricing</Link>
-            </div>
-            <Link href="/customer-demo" className="hidden md:block bg-hvac-yellow hover:bg-yellow-400 text-hvac-darkgray px-6 py-2 rounded-lg font-bold transition">
-              View Customer Demo
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-hvac-light flex flex-col">
+      <Header />
 
       {/* Hero Section */}
       <section className="bg-hvac-darkgray text-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 my-8 rounded-lg border-t-4 border-hvac-orange">
@@ -138,12 +124,7 @@ export default function FAQ() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-hvac-darkgray border-t-4 border-hvac-orange py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-300">&copy; 2026 ProFlow HVAC Solutions. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
