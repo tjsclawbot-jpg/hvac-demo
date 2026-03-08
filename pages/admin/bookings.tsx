@@ -1169,6 +1169,18 @@ export default function AdminBookings() {
                                 >
                                   📝 Notes
                                 </button>
+
+                                {booking.status === 'pending' && (
+                                  <button
+                                    onClick={async () => {
+                                      // Confirm the voice booking - moves it to the main calendar/day view
+                                      handleVoiceBookingStatusChange(booking.id, 'confirmed')
+                                    }}
+                                    className="px-3 py-2 text-xs font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-all min-h-[36px]"
+                                  >
+                                    ✓ Confirm
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </>
