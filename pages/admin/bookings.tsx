@@ -77,6 +77,9 @@ export default function AdminBookings() {
   const [completionPathModal, setCompletionPathModal] = useState<{ bookingId: string } | null>(null)
   const [selectContractorModal, setSelectContractorModal] = useState<{ bookingId: string } | null>(null)
   const [selectedColleague, setSelectedColleague] = useState<string | null>(null)
+  const [notesModal, setNotesModal] = useState<{ bookingId: string; type: 'voice' | 'web' } | null>(null)
+  const [notesText, setNotesText] = useState<string>('')
+  const [savingNotes, setSavingNotes] = useState(false)
   const [smsState, setSmsState] = useState<{ loading: boolean; error?: string; bookingId?: string } | null>(null)
   const [smsHistory, setSmsHistory] = useState<Record<string, any[]>>({})
   const [loadingSMSHistory, setLoadingSMSHistory] = useState<Record<string, boolean>>({})
@@ -102,7 +105,7 @@ export default function AdminBookings() {
             date: new Date(booking.created_at).toISOString().split('T')[0],
             status: 'pending' as const,
             customerEmail: '',
-            notes: '',
+            notes: booking.notes || '',
             contractor_assigned: booking.contractor_assigned || undefined
           }))
           
@@ -1113,7 +1116,7 @@ export default function AdminBookings() {
 
                             {/* Quick Action Buttons */}
                             <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 space-y-2">
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                                 <button
                                   className="px-3 py-2 text-xs font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 transition-all min-h-[36px]"
                                 >
@@ -1158,9 +1161,19 @@ export default function AdminBookings() {
 
                                 <button
                                   onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
+                                  className="px-3 py-2 text-xs font-bold bg-orange-600 text-white rounded-lg hover:bg-orange-700 active:bg-orange-800 transition-all min-h-[36px]"
+                                >
+                                  👥 Team
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setNotesModal({ bookingId: booking.id, type: 'voice' })
+                                    setNotesText(booking.notes || '')
+                                  }}
                                   className="px-3 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all min-h-[36px]"
                                 >
-                                  👥 Colleague
+                                  📝 Notes
                                 </button>
                               </div>
                             </div>
@@ -1682,6 +1695,91 @@ export default function AdminBookings() {
                   className="w-full px-4 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold text-base hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 transition-all shadow-md hover:shadow-lg touch-manipulation min-h-[44px]"
                 >
                   💰 Process Refund {formatCurrency(refundAmount)}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {notesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in flex flex-col max-h-[90vh]">
+            <div className="px-5 md:px-7 py-6 md:py-8 flex-shrink-0">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray">📝 Booking Notes</h2>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-4">
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                placeholder="Add notes about this booking..."
+                className="w-full h-48 p-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-base font-medium text-gray-700 resize-none"
+              />
+            </div>
+
+            {/* Footer - Sticky */}
+            <div className="px-5 md:px-7 py-6 md:py-8 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-t-3xl md:rounded-b-2xl">
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    setSavingNotes(true)
+                    try {
+                      const response = await fetch('/api/admin/save-notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          bookingId: notesModal.bookingId,
+                          notes: notesText,
+                          type: notesModal.type
+                        })
+                      })
+
+                      const result = await response.json()
+                      if (result.success) {
+                        // Update local state
+                        if (notesModal.type === 'voice') {
+                          setVoiceBookings(voiceBookings.map(b =>
+                            b.id === notesModal.bookingId
+                              ? { ...b, notes: notesText }
+                              : b
+                          ))
+                        } else {
+                          setBookings(bookings.map(b =>
+                            b.id === notesModal.bookingId
+                              ? { ...b, notes: notesText }
+                              : b
+                          ))
+                        }
+                        setNotesModal(null)
+                        setNotesText('')
+                      }
+                    } catch (error) {
+                      console.error('Error saving notes:', error)
+                    } finally {
+                      setSavingNotes(false)
+                    }
+                  }}
+                  disabled={savingNotes}
+                  className={`w-full px-4 py-4 rounded-xl font-bold text-base transition-all touch-manipulation min-h-[44px] ${
+                    savingNotes
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  }`}
+                >
+                  {savingNotes ? '⏳ Saving...' : '💾 Save Notes'}
+                </button>
+                <button
+                  onClick={() => {
+                    setNotesModal(null)
+                    setNotesText('')
+                  }}
+                  disabled={savingNotes}
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

@@ -16,10 +16,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Fetch all voice bookings from Supabase (including contractor_assigned if it exists)
+    // Fetch all voice bookings from Supabase (including contractor_assigned and notes)
     const { data, error } = await supabase
       .from('voice_bookings')
-      .select('*, contractor_assigned:contractor_assigned')
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
