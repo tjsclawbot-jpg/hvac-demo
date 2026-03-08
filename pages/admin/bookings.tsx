@@ -1464,14 +1464,17 @@ export default function AdminBookings() {
       {/* Select Contractor Dialog */}
       {selectContractorModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
-            <div className="px-5 md:px-7 py-8 md:py-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">👤 Assign to Contractor</h2>
-              <p className="text-lg text-gray-700 mb-6">Select a contractor for this job:</p>
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in flex flex-col max-h-[90vh]">
+            <div className="px-5 md:px-7 py-6 md:py-8 flex-shrink-0">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-2">👤 Assign to Contractor</h2>
+              <p className="text-lg text-gray-700">Select a contractor for this job:</p>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-5 md:px-7">
               {/* SMS Status Messages */}
               {smsState?.bookingId === selectContractorModal.bookingId && (
-                <div className={`mb-6 p-4 rounded-xl border-2 ${
+                <div className={`mb-4 p-4 rounded-xl border-2 ${
                   smsState.error
                     ? 'bg-red-50 border-red-300'
                     : 'bg-green-50 border-green-300'
@@ -1489,7 +1492,7 @@ export default function AdminBookings() {
                 </div>
               )}
 
-              <div className="mb-6 space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-3 pb-4">
                 {CONTRACTORS.map(contractor => (
                   <button
                     key={contractor.id}
@@ -1507,7 +1510,10 @@ export default function AdminBookings() {
                   </button>
                 ))}
               </div>
+            </div>
 
+            {/* Footer - Sticky */}
+            <div className="px-5 md:px-7 py-6 md:py-8 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-t-3xl md:rounded-b-2xl">
               <button
                 onClick={() => setSelectContractorModal(null)}
                 disabled={smsState?.loading}
@@ -1527,11 +1533,14 @@ export default function AdminBookings() {
       {/* Assign Colleague Modal */}
       {assignColleagueModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in">
-            <div className="px-5 md:px-7 py-8 md:py-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray mb-6">👤 Assign to Colleague</h2>
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md shadow-2xl animate-in flex flex-col max-h-[90vh]">
+            <div className="px-5 md:px-7 py-6 md:py-8 flex-shrink-0">
+              <h2 className="text-3xl md:text-4xl font-bold text-hvac-darkgray">👤 Assign to Colleague</h2>
+            </div>
 
-              <div className="mb-6 space-y-3 max-h-64 overflow-y-auto">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-5 md:px-7">
+              <div className="space-y-3 pb-4">
                 {TEAM_MEMBERS.map(colleague => (
                   <button
                     key={colleague.id}
@@ -1543,7 +1552,10 @@ export default function AdminBookings() {
                   </button>
                 ))}
               </div>
+            </div>
 
+            {/* Footer - Sticky */}
+            <div className="px-5 md:px-7 py-6 md:py-8 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-t-3xl md:rounded-b-2xl">
               <button
                 onClick={() => setAssignColleagueModal(null)}
                 className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl font-bold text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all touch-manipulation min-h-[44px]"
