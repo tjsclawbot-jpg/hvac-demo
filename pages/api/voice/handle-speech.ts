@@ -24,14 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, 'Please stand by while we connect you to one of our team managers.')
       response.pause({ length: 2 })
       
-      // Keep them on hold with messages
+      // Keep them on hold with hold messages
       response.say({
         engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
-      }, 'Please hold. We are connecting you to a manager.')
-      response.pause({ length: 15 })
+      }, 'Please hold. We are connecting you to a manager. Your call is important to us.')
+      response.pause({ length: 12 })
       response.say({
         engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
-      }, 'A manager will call you back shortly. Goodbye.')
+      }, 'A manager will call you back shortly. Thank you for your patience. Goodbye.')
       response.hangup()
       
       res.status(200)
