@@ -12,7 +12,7 @@ export default function Pricing() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-hvac-orange to-orange-600 text-white section-padding">
         <div className="container-max">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">Build and Own Your Lead Generation System — Custom Built for Busy HVAC Professionals in the DMV Area</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">Lead Generation System for HVAC Professionals</h1>
           <p className="text-xl opacity-95 max-w-3xl mb-8">
             Launch your own professional booking & referral platform in 3 days. Generate more leads. Close more jobs. Simple pricing. Full ownership.
           </p>
