@@ -51,9 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const companyName = process.env.COMPANY_NAME || 'ProFlow DMV'
     
-    console.log(`[${timestamp}] Adding say verb`)
+    console.log(`[${timestamp}] Adding say verb with Amazon Polly`)
+    // Using Amazon Polly with 'Joey' voice for southern accent
     response.say({
-      voice: 'man' as any,
+      engine: 'polly' as any,
+      voiceId: 'Joey' as any, // Southern-sounding male voice
+      lang: 'en-US'
     }, `This is an automated scheduling service for ${companyName}. Are you calling about heating, AC, or an emergency service? If you'd prefer to speak with a representative, just say so and we'll have someone call you back at a scheduled time.`)
     response.pause({ length: 1 })
     
