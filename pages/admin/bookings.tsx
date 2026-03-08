@@ -1471,10 +1471,10 @@ export default function AdminBookings() {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-5 md:px-7">
+            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-4">
               {/* SMS Status Messages */}
               {smsState?.bookingId === selectContractorModal.bookingId && (
-                <div className={`mb-4 p-4 rounded-xl border-2 ${
+                <div className={`mb-3 p-4 rounded-xl border-2 ${
                   smsState.error
                     ? 'bg-red-50 border-red-300'
                     : 'bg-green-50 border-green-300'
@@ -1492,7 +1492,7 @@ export default function AdminBookings() {
                 </div>
               )}
 
-              <div className="space-y-3 pb-4">
+              <div className="space-y-2">
                 {CONTRACTORS.map(contractor => (
                   <button
                     key={contractor.id}
@@ -1539,8 +1539,8 @@ export default function AdminBookings() {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-5 md:px-7">
-              <div className="space-y-3 pb-4">
+            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-4">
+              <div className="space-y-2">
                 {TEAM_MEMBERS.map(colleague => (
                   <button
                     key={colleague.id}
@@ -1577,8 +1577,8 @@ export default function AdminBookings() {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-5 md:px-7">
-              <div className="space-y-4 pb-4">
+            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-4">
+              <div className="space-y-4">
                 {/* Customer Info */}
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                   <p className="text-xs uppercase tracking-wider font-semibold text-gray-600 mb-2">Customer</p>
