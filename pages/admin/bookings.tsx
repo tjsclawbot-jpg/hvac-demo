@@ -1157,9 +1157,10 @@ export default function AdminBookings() {
                                 </button>
 
                                 <button
+                                  onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
                                   className="px-3 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all min-h-[36px]"
                                 >
-                                  📝 Notes
+                                  👥 Colleague
                                 </button>
                               </div>
                             </div>
