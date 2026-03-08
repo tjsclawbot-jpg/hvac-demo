@@ -119,12 +119,6 @@ export default function AdminBookings() {
     fetchVoiceBookings()
   }, [])
   
-  // Helper function to get progress percentage for status
-  const getProgressPercentage = (status: string) => {
-    const progression = { pending: 25, confirmed: 50, 'in-progress': 75, completed: 100 }
-    return progression[status as keyof typeof progression] || 0
-  }
-
   // Filter bookings based on type and status
   const filteredBookings = filterStatus === 'all' 
     ? bookings 
