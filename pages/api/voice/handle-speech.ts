@@ -24,11 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, 'Please stand by while we connect you to one of our team managers.')
       response.pause({ length: 2 })
       
-      // Play hold music on a loop while waiting
-      // Using Twilio's demo hold music
-      response.play({
-        loop: 10  // loop 10 times (~ 5 minutes)
-      } as any, 'http://demo.twilio.com/docs/voice.mp3')
+      // Keep them on hold with messages
+      response.say({
+        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+      }, 'Please hold. We are connecting you to a manager.')
+      response.pause({ length: 15 })
+      response.say({
+        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+      }, 'A manager will call you back shortly. Goodbye.')
+      response.hangup()
       
       res.status(200)
       res.setHeader('Content-Type', 'application/xml')
