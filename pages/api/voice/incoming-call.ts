@@ -49,10 +49,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()
     
+    const companyName = process.env.COMPANY_NAME || 'ProFlow DMV'
+    
     console.log(`[${timestamp}] Adding say verb`)
     response.say({
       voice: 'alice' as any,
-    }, 'Hi, thanks for calling ProFlow DMV. Are you calling about heating, AC, or an emergency service?')
+    }, `This is an automated scheduling service for ${companyName}. Are you calling about heating, AC, or an emergency service? If you'd prefer to speak with a representative, just say so and we'll have someone call you back at a scheduled time.`)
     response.pause({ length: 1 })
     
     console.log(`[${timestamp}] Adding gather verb`)

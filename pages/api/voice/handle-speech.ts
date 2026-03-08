@@ -16,6 +16,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()
 
+    // Check if user is requesting a human representative
+    if (isRequestingHuman(speechResult)) {
+      console.log(`👤 User requesting human representative`)
+      response.say({
+        voice: 'alice' as any,
+      }, 'Please stand by while we connect you to one of our team managers.')
+      response.pause({ length: 2 })
+      
+      // Play hold music (using a royalty-free Mexican-style music URL)
+      // Looping mariachi-style music while waiting for representative
+      response.play({
+        loop: 0  // infinite loop
+      } as any, 'https://cdn.pixabay.com/download/audio/2024/03/20/audio-c5b97e6a67.mp3?filename=mexico-130745.mp3')
+      
+      res.status(200)
+      res.setHeader('Content-Type', 'application/xml')
+      res.send(response.toString())
+      return
+    }
+
     // Detect service type
     const serviceType = detectServiceType(speechResult)
 
@@ -79,6 +99,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Type', 'application/xml')
     res.send(response.toString())
   }
+}
+
+function isRequestingHuman(speech: string): boolean {
+  const lower = speech.toLowerCase()
+  
+  // Check for keywords requesting a human
+  const humanKeywords = [
+    'representative',
+    'manager',
+    'human',
+    'person',
+    'someone',
+    'speak',
+    'talk',
+    'agent',
+    'operator',
+    'please',
+  ]
+  
+  // Need at least 2 keywords or a specific strong keyword
+  const strongKeywords = ['representative', 'manager', 'human', 'agent', 'operator']
+  
+  // Check for strong keywords first
+  if (strongKeywords.some(keyword => lower.includes(keyword))) {
+    return true
+  }
+  
+  // Check for combination of weaker keywords
+  const matchCount = humanKeywords.filter(keyword => lower.includes(keyword)).length
+  return matchCount >= 2
 }
 
 function detectServiceType(speech: string): string | null {
