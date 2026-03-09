@@ -23,15 +23,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const table = type === 'voice' ? 'voice_bookings' : 'bookings'
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from(table)
       .update({ notes: String(notes || '').trim() || null })
       .eq('id', bookingId)
-      .select()
 
     if (error) throw error
-    if (!data?.length) return res.status(404).json({ success: false, error: 'Booking not found' })
-
     return res.status(200).json({ success: true, message: 'Notes saved' })
   } catch (error) {
     console.error('❌ Error saving notes:', error)
