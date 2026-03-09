@@ -806,8 +806,16 @@ export default function AdminBookings() {
                       {/* Contractor Assignment Display */}
                       {booking.contractor_assigned && (
                         <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-300">
-                          <p className="text-xs uppercase tracking-wider font-semibold text-indigo-700 mb-1">👤 Contractor Assigned</p>
+                          <p className="text-xs uppercase tracking-wider font-semibold text-indigo-700 mb-1">👷 Contractor Assigned</p>
                           <p className="text-base font-bold text-indigo-900">{booking.contractor_assigned}</p>
+                        </div>
+                      )}
+
+                      {/* Team Member Assignment Display */}
+                      {(booking as any).assignedTo && (
+                        <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-300">
+                          <p className="text-xs uppercase tracking-wider font-semibold text-purple-700 mb-1">👥 Team Member Assigned</p>
+                          <p className="text-base font-bold text-purple-900">{(booking as any).assignedTo}</p>
                         </div>
                       )}
 
@@ -888,6 +896,14 @@ export default function AdminBookings() {
                           </div>
                         </div>
 
+                        {/* Assigned Team Member Display */}
+                        {(booking as any).assignedTo && (
+                          <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 bg-gradient-to-r from-purple-50 to-purple-100">
+                            <p className="text-xs uppercase tracking-wider font-semibold text-purple-700 mb-2">👥 Assigned Team Member</p>
+                            <p className="text-lg font-bold text-purple-900">{(booking as any).assignedTo}</p>
+                          </div>
+                        )}
+
                         {/* Quick Action Buttons */}
                         <div className="border-t border-gray-200 px-5 md:px-7 py-5 md:py-6 space-y-3 bg-white">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -895,7 +911,7 @@ export default function AdminBookings() {
                               onClick={() => setAssignColleagueModal({ bookingId: booking.id })}
                               className="px-4 py-3 md:py-3.5 text-base font-semibold bg-purple-50 border-2 border-purple-300 text-purple-700 rounded-xl hover:bg-purple-100 active:bg-purple-200 transition-all min-h-[44px]"
                             >
-                              👤 Assign
+                              👥 Assign
                             </button>
 
                             <button
@@ -1322,11 +1338,14 @@ export default function AdminBookings() {
                                   </span>
                                 </div>
 
-                                {/* Address & Contractor */}
+                                {/* Address & Assignments */}
                                 <div className={`rounded p-2 mb-3 text-xs space-y-1 ${isVoice ? 'bg-purple-100' : 'bg-gray-50'}`}>
                                   <p className={`font-semibold ${isVoice ? 'text-purple-900' : 'text-gray-600'}`}>📍 {booking.serviceAddress || booking.customerAddress}</p>
                                   {booking.contractor_assigned && (
-                                    <p className="text-indigo-700 font-semibold">👤 {booking.contractor_assigned}</p>
+                                    <p className="text-indigo-700 font-semibold">👷 Contractor: {booking.contractor_assigned}</p>
+                                  )}
+                                  {!isVoice && (booking as any).assignedTo && (
+                                    <p className="text-purple-700 font-semibold">👥 Team: {(booking as any).assignedTo}</p>
                                   )}
                                   {isVoice && <p className="text-xs text-purple-700">Voice Booking</p>}
                                 </div>
