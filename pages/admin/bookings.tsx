@@ -1769,6 +1769,7 @@ export default function AdminBookings() {
                   onClick={async () => {
                     setSavingNotes(true)
                     try {
+                      console.log(`📝 Saving notes for booking ${notesModal.bookingId}`)
                       const response = await fetch('/api/admin/save-notes', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1780,26 +1781,35 @@ export default function AdminBookings() {
                       })
 
                       const result = await response.json()
-                      if (result.success) {
-                        // Update local state
-                        if (notesModal.type === 'voice') {
-                          setVoiceBookings(voiceBookings.map(b =>
-                            b.id === notesModal.bookingId
-                              ? { ...b, notes: notesText }
-                              : b
-                          ))
-                        } else {
-                          setBookings(bookings.map(b =>
-                            b.id === notesModal.bookingId
-                              ? { ...b, notes: notesText }
-                              : b
-                          ))
-                        }
-                        setNotesModal(null)
-                        setNotesText('')
+                      console.log('Save notes response:', result)
+                      
+                      if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'Failed to save notes')
                       }
+
+                      // Update local state
+                      if (notesModal.type === 'voice') {
+                        setVoiceBookings(voiceBookings.map(b =>
+                          b.id === notesModal.bookingId
+                            ? { ...b, notes: notesText }
+                            : b
+                        ))
+                      } else {
+                        setBookings(bookings.map(b =>
+                          b.id === notesModal.bookingId
+                            ? { ...b, notes: notesText }
+                            : b
+                        ))
+                      }
+                      
+                      console.log(`✅ Notes saved successfully`)
+                      setNotesModal(null)
+                      setNotesText('')
+                      alert('Notes saved!')
                     } catch (error) {
-                      console.error('Error saving notes:', error)
+                      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                      console.error('❌ Error saving notes:', error)
+                      alert(`Failed to save notes: ${errorMsg}`)
                     } finally {
                       setSavingNotes(false)
                     }

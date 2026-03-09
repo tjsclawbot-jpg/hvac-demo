@@ -25,25 +25,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Determine which table to update based on type
     const table = type === 'voice' ? 'voice_bookings' : 'bookings'
     
-    const { error } = await supabase
+    console.log(`📝 Saving notes for booking ${bookingId} (${table})`)
+    
+    const { data, error } = await supabase
       .from(table)
       .update({
         notes: notes,
         updated_at: new Date().toISOString()
       })
       .eq('id', bookingId)
+      .select()
+
+    console.log(`Supabase response:`, { data, error })
 
     if (error) {
-      console.error('Supabase error:', error)
-      return res.status(500).json({ success: false, error: error.message })
+      console.error('❌ Supabase error:', error)
+      return res.status(500).json({ 
+        success: false, 
+        error: `Supabase error: ${error.message}` 
+      })
     }
 
+    if (!data || data.length === 0) {
+      console.warn(`⚠️ No booking found with ID: ${bookingId}`)
+      return res.status(404).json({
+        success: false,
+        error: `Booking not found: ${bookingId}`
+      })
+    }
+
+    console.log(`✅ Notes saved successfully for booking ${bookingId}`)
     return res.status(200).json({
       success: true,
-      message: 'Notes saved successfully'
+      message: 'Notes saved successfully',
+      data: data[0]
     })
   } catch (error) {
-    console.error('Error saving notes:', error)
+    console.error('❌ Error saving notes:', error)
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
