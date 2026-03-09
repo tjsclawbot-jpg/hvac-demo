@@ -26,12 +26,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const table = type === 'voice' ? 'voice_bookings' : 'bookings'
     
     console.log(`📝 Saving notes for booking ${bookingId} (${table})`)
+    console.log(`Notes content: "${notes}" (length: ${notes.length})`)
+    
+    // Sanitize notes - ensure it's a valid string
+    const sanitizedNotes = String(notes || '').trim()
     
     const { data, error } = await supabase
       .from(table)
       .update({
-        notes: notes,
-        updated_at: new Date().toISOString()
+        notes: sanitizedNotes || null
       })
       .eq('id', bookingId)
       .select()
@@ -40,6 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) {
       console.error('❌ Supabase error:', error)
+      
+      // If it's a pattern error, likely the notes column doesn't exist or has a constraint
+      if (error.message?.includes('pattern') || error.message?.includes('constraint')) {
+        return res.status(500).json({ 
+          success: false, 
+          error: `Column validation error. The notes column may not exist. Please contact support.` 
+        })
+      }
+      
       return res.status(500).json({ 
         success: false, 
         error: `Supabase error: ${error.message}` 
