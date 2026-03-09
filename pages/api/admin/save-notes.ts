@@ -22,31 +22,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Determine which table to update based on type
     const table = type === 'voice' ? 'voice_bookings' : 'bookings'
-    
-    console.log(`📝 Saving notes for booking ${bookingId} (${table})`)
-    console.log(`Notes content: "${notes}" (length: ${notes.length})`)
-    
-    // Sanitize notes - ensure it's a valid string
-    const sanitizedNotes = String(notes || '').trim()
-    
-    // TEMPORARY FIX: Skip the actual update due to Supabase constraint issue
-    // Notes are shown in the UI but not persisted to DB until schema is fixed
-    console.log(`⚠️ Notes feature temporarily disabled due to database constraint. Data accepted but not saved.`)
-    
-    // Simulate success response for now
-    console.log(`✅ Notes saved successfully for booking ${bookingId} (UI only)`)
-    return res.status(200).json({
-      success: true,
-      message: 'Notes updated (UI only - database constraint pending fix)',
-      bookingId
-    })
+    const { data, error } = await supabase
+      .from(table)
+      .update({ notes: String(notes || '').trim() || null })
+      .eq('id', bookingId)
+      .select()
+
+    if (error) throw error
+    if (!data?.length) return res.status(404).json({ success: false, error: 'Booking not found' })
+
+    return res.status(200).json({ success: true, message: 'Notes saved' })
   } catch (error) {
-    console.error('❌ Error in notes handler:', error)
-    return res.status(200).json({
-      success: true,
-      message: 'Notes accepted (temporary UI-only mode)'
-    })
+    console.error('❌ Error saving notes:', error)
+    return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Error' })
   }
 }
