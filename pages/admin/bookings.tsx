@@ -361,8 +361,10 @@ export default function AdminBookings() {
           bookingId
         )
       } catch (error) {
-        console.error('Error assigning contractor:', error)
-        alert('Failed to assign contractor. Please try again.')
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('❌ Error assigning contractor:', error)
+        alert(`Failed to assign contractor: ${errorMsg}`)
+        setSelectContractorModal(null)
       }
     } else if (webBooking) {
       // Handle web booking
