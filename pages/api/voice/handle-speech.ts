@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (isRequestingHuman(speechResult)) {
       console.log(`👤 User requesting human representative`)
       response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+        
       }, 'Stand by while I connect you to a manager. Your call is important to us. A manager will call you back shortly.')
       response.pause({ length: 5 })
       response.hangup()
@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Confirm service and ask for name
       response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+        
       }, `Great! I found our ${serviceType} here. Now if you could please give me your name`)
       
       response.gather({
@@ -61,11 +61,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Service not recognized, ask again
       response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+        
       }, 'Sorry, I did not get that, could you say your service type again?')
       response.pause({ length: 1 })
       response.say({
-        engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+        
       }, 'I apologize, please say again what service you need. You can say heating, AC, plumbing, or emergency.')
       
       response.gather({
@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const VoiceResponse = twilio.twiml.VoiceResponse
     const response = new VoiceResponse()
     response.say({
-      engine: 'polly' as any, voiceId: 'Joey' as any, lang: 'en-US'
+      
     }, 'Sorry, an error occurred.')
     response.hangup()
     

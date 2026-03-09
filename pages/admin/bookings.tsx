@@ -1271,108 +1271,116 @@ export default function AdminBookings() {
                       })()}
                     </div>
 
+                    {/* Render jobs list or empty state */}
                     {(() => {
                       const webJobs = dayViewBookings
                       const voiceJobs = filteredVoiceBookings.filter(b => b.date === selectedDate && b.status !== 'pending')
                       const allJobs = [
                         ...webJobs.map(b => ({ ...b, source: 'web' as const })),
                         ...voiceJobs.map(b => ({ ...b, source: 'voice' as const }))
-                      ].sort((a, b) => (a.time || a.preferredTime || '').localeCompare(b.time || b.preferredTime || ''))
-                      
-                      return allJobs.length > 0 ? (
-                      <div className="space-y-3">
-                        {allJobs.map((booking: any) => {
-                          const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
-                          const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
-                          const isVoice = booking.source === 'voice'
-                          
-                            return (
-                            <div
-                              key={`${booking.source}-${booking.id}`}
-                              className={`rounded-lg border p-4 shadow-sm hover:shadow-md transition-all ${isVoice ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-200'}`}
-                            >
-                              {/* Header - Time, Name, Status */}
-                              <div className="flex items-start justify-between gap-3 mb-3">
-                                <div className="flex-grow min-w-0">
-                                  <p className="text-xs text-gray-600 font-semibold">⏰ {booking.time || booking.preferredTime}</p>
-                                  <h4 className="text-lg font-bold text-hvac-darkgray truncate">{booking.customerName}</h4>
-                                  <p className="text-sm text-gray-600">
-                                    {isVoice ? '🎤' : serviceIcon} {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType.replace('-', ' ')}
-                                  </p>
-                                </div>
-                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
-                                  <span>{statusConfig.icon}</span>
-                                </span>
-                              </div>
+                      ].sort((a, b) => {
+                        const timeA = (a as any).time || (a as any).preferredTime || ''
+                        const timeB = (b as any).time || (b as any).preferredTime || ''
+                        return timeA.localeCompare(timeB)
+                      })
 
-                              {/* Address & Contractor */}
-                              <div className={`rounded p-2 mb-3 text-xs space-y-1 ${isVoice ? 'bg-purple-100' : 'bg-gray-50'}`}>
-                                <p className={`font-semibold ${isVoice ? 'text-purple-900' : 'text-gray-600'}`}>📍 {booking.serviceAddress || booking.customerAddress}</p>
-                                {booking.contractor_assigned && (
-                                  <p className="text-indigo-700 font-semibold">👤 {booking.contractor_assigned}</p>
-                                )}
-                                {isVoice && <p className="text-xs text-purple-700">Voice Booking</p>}
-                              </div>
-
-                              {/* Quick Actions - Compact */}
-                              <div className="flex gap-2 flex-wrap">
-                                {booking.status === 'pending' && !isVoice && (
-                                  <button
-                                    onClick={() => handleStatusChange(booking.id, 'confirmed')}
-                                    className="flex-1 px-2 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs font-bold transition-all"
-                                  >
-                                    ✓ Confirm
-                                  </button>
-                                )}
-                                {booking.status === 'confirmed' && (
-                                  <button
-                                    onClick={() => isVoice ? handleVoiceBookingStatusChange(booking.id, 'in-progress') : handleStatusChange(booking.id, 'in-progress')}
-                                    className="flex-1 px-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-bold transition-all"
-                                  >
-                                    ➜ Start
-                                  </button>
-                                )}
-                                {booking.status === 'in-progress' && (
-                                  <button
-                                    onClick={() => setCompletionPathModal({ bookingId: booking.id })}
-                                    className="flex-1 px-2 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-bold transition-all"
-                                  >
-                                    ✓ Complete
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => isVoice ? setSelectContractorModal({ bookingId: booking.id }) : setAssignColleagueModal({ bookingId: booking.id })}
-                                  className="flex-1 px-2 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded text-xs font-bold transition-all"
-                                >
-                                  👤 Assign
-                                </button>
-                                {!isVoice && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedBooking(booking)
-                                      setRefundAmount(145)
-                                      setRefundModalOpen(true)
-                                    }}
-                                    className="px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-all"
-                                    title="Refund"
-                                  >
-                                    💰
-                                  </button>
-                                )}
-                              </div>
+                      if (allJobs.length === 0) {
+                        return (
+                          <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                            <p className="text-3xl mb-2">📭</p>
+                            <p className="font-bold text-gray-700">No appointments</p>
+                            <p className="text-sm text-gray-600">for this date</p>
                           </div>
                         )
-                      })}
-                    </div>
-                    ) : (
-                      <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                        <p className="text-3xl mb-2">📭</p>
-                        <p className="font-bold text-gray-700">No appointments</p>
-                        <p className="text-sm text-gray-600">for this date</p>
-                      </div>
-                    )}
-                    </>
-                    )}
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {allJobs.map((booking: any) => {
+                            const statusConfig = statusColorMap[booking.status as keyof typeof statusColorMap] || statusColorMap.pending
+                            const serviceIcon = serviceIcons[booking.serviceType] || '⚙'
+                            const isVoice = booking.source === 'voice'
+                            
+                            return (
+                              <div
+                                key={`${booking.source}-${booking.id}`}
+                                className={`rounded-lg border p-4 shadow-sm hover:shadow-md transition-all ${isVoice ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-200'}`}
+                              >
+                                {/* Header - Time, Name, Status */}
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                  <div className="flex-grow min-w-0">
+                                    <p className="text-xs text-gray-600 font-semibold">⏰ {(booking as any).time || (booking as any).preferredTime}</p>
+                                    <h4 className="text-lg font-bold text-hvac-darkgray truncate">{booking.customerName}</h4>
+                                    <p className="text-sm text-gray-600">
+                                      {isVoice ? '🎤' : serviceIcon} {VOICE_SERVICE_TYPES[booking.serviceType] || booking.serviceType.replace('-', ' ')}
+                                    </p>
+                                  </div>
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                    <span>{statusConfig.icon}</span>
+                                  </span>
+                                </div>
+
+                                {/* Address & Contractor */}
+                                <div className={`rounded p-2 mb-3 text-xs space-y-1 ${isVoice ? 'bg-purple-100' : 'bg-gray-50'}`}>
+                                  <p className={`font-semibold ${isVoice ? 'text-purple-900' : 'text-gray-600'}`}>📍 {booking.serviceAddress || booking.customerAddress}</p>
+                                  {booking.contractor_assigned && (
+                                    <p className="text-indigo-700 font-semibold">👤 {booking.contractor_assigned}</p>
+                                  )}
+                                  {isVoice && <p className="text-xs text-purple-700">Voice Booking</p>}
+                                </div>
+
+                                {/* Quick Actions - Compact */}
+                                <div className="flex gap-2 flex-wrap">
+                                  {booking.status === 'pending' && !isVoice && (
+                                    <button
+                                      onClick={() => handleStatusChange(booking.id, 'confirmed')}
+                                      className="flex-1 px-2 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs font-bold transition-all"
+                                    >
+                                      ✓ Confirm
+                                    </button>
+                                  )}
+                                  {booking.status === 'confirmed' && (
+                                    <button
+                                      onClick={() => isVoice ? handleVoiceBookingStatusChange(booking.id, 'in-progress') : handleStatusChange(booking.id, 'in-progress')}
+                                      className="flex-1 px-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-bold transition-all"
+                                    >
+                                      ➜ Start
+                                    </button>
+                                  )}
+                                  {booking.status === 'in-progress' && (
+                                    <button
+                                      onClick={() => setCompletionPathModal({ bookingId: booking.id })}
+                                      className="flex-1 px-2 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-bold transition-all"
+                                    >
+                                      ✓ Complete
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => isVoice ? setSelectContractorModal({ bookingId: booking.id }) : setAssignColleagueModal({ bookingId: booking.id })}
+                                    className="flex-1 px-2 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded text-xs font-bold transition-all"
+                                  >
+                                    👤 Assign
+                                  </button>
+                                  {!isVoice && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedBooking(booking)
+                                        setRefundAmount(145)
+                                        setRefundModalOpen(true)
+                                      }}
+                                      className="px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-all"
+                                      title="Refund"
+                                    >
+                                      💰
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
